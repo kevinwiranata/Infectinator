@@ -201,11 +201,11 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
-        Mat4.look_at(
-        vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
-        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
-        vec3(0, 1, 1)));
+        // this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
+        // Mat4.look_at(
+        // vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
+        // vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
+        // vec3(0, 1, 1)));
 
         this.key_triggered_button("Left", ["v"], () => {
             this.torusLocation.x += -0.5
@@ -236,14 +236,17 @@ export class Virus extends Scene {
         // CAMERA SETUP
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            program_state.set_camera(Mat4.inverse(this.initial_camera_location));
+            //program_state.set_camera(Mat4.inverse(this.initial_camera_location));
         }
-        if(this.attached) {
-            if (this.attached() !== this.initial_camera_location) {
-                program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.attached()))
-                  .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .1)));
-              }
-        }
+
+        this.camera_matrix = Mat4.look_at(
+        vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
+        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
+        vec3(0, 1, 1));
+
+        program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
+        .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .1)));
+
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
