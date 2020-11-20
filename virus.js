@@ -160,8 +160,8 @@ export class Virus extends Scene {
         this.virus = Mat4.identity();
 
         // TODO: commenting this out for now, causing jerky camera movements.
-        // this.initial_camera_location = Mat4.look_at(vec3(0, 0, -17.82), vec3(0, 0, 0), vec3(0, 1, 0));
-        // this.attached = () => this.initial_camera_location;
+        this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
+        this.attached = () => this.initial_camera_location;
 
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
@@ -200,23 +200,23 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Fixed View", ["b"], () => this.attached = () =>
+        this.key_triggered_button("Fixed View", ["f"], () => this.attached = () =>
         Mat4.look_at(
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3] + 1),
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1)));
 
-        this.key_triggered_button("Left", ["a"], () => {
-            this.torusLocation.x += -0.05
+        this.key_triggered_button("Left", ["v"], () => {
+            this.torusLocation.x += -0.5
         });
-        this.key_triggered_button("Right", ["d"], () => {
-            this.torusLocation.x += 0.05
+        this.key_triggered_button("Right", ["n"], () => {
+            this.torusLocation.x += 0.5
         });
-        this.key_triggered_button("Up", ["w"], () => {
-            this.torusLocation.y += 0.05
+        this.key_triggered_button("Up", ["g"], () => {
+            this.torusLocation.y += 0.5
         });
-        this.key_triggered_button("Down", ["s"], () => {
-            this.torusLocation.y += -0.05
+        this.key_triggered_button("Down", ["b"], () => {
+            this.torusLocation.y += -0.5
         });
         this.key_triggered_button("Shoot", ["p"], this.firebullet)
     }
@@ -233,6 +233,7 @@ export class Virus extends Scene {
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+            program_state.set_camera(this.initial_camera_location);
         }
 
         program_state.projection_transform = Mat4.perspective(
@@ -268,7 +269,7 @@ export class Virus extends Scene {
         if(this.attached) {
             if (this.attached() !== this.initial_camera_location) {
                 program_state.set_camera(this.attached().times(Mat4.translation(0, 0, -100))
-                  .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .3)));
+                  .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .5)));
             }
         }
 
