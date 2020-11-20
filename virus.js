@@ -1,7 +1,7 @@
 import {defs, tiny} from './examples/common.js';
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
 export class Shape_From_File extends Shape {                                   // **Shape_From_File** is a versatile standalone Shape that imports
@@ -131,10 +131,9 @@ export class Virus extends Scene {
             torus: new defs.Torus(15, 15),
             torus2: new defs.Torus(3, 15),
             sphere: new defs.Subdivision_Sphere(4),
+            test: new defs.Square(),
             circle: new defs.Regular_2D_Polygon(1, 15),
             covid: new Shape_From_File("assets/Covid_Virus _OBJ.obj"),
-            // TODO:  Fill in as many additional shape instances as needed in this key/value table.
-            //        (Requirement 1)
         };
 
         // *** Materials
@@ -150,8 +149,11 @@ export class Virus extends Scene {
                 diffusivity: 1,
                 specularity: .5
             }),
-            // TODO:  Fill in as many additional material objects as needed in this key/value table.
-            //        (Requirement 4)
+            petriDish: new Material(new defs.Fake_Bump_Map(1), {
+                color: color(0, 0, 0, 1),
+                ambient: 1,
+                texture: new Texture("./assets/dish.png")
+            })
         }
 
         this.bullets = [];
@@ -159,7 +161,6 @@ export class Virus extends Scene {
         this.bulletPositions = [];
         this.virus = Mat4.identity();
 
-        // TODO: commenting this out for now, causing jerky camera movements.
         this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
         this.attached = () => this.initial_camera_location;
 
@@ -200,9 +201,9 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Fixed View", ["f"], () => this.attached = () =>
+        this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
         Mat4.look_at(
-        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3] + 1),
+        vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1)));
 
@@ -225,27 +226,38 @@ export class Virus extends Scene {
         this.bullets.push(this.materials.bullet);
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
-        .times(Mat4.scale(0.2, 0.2, 0.2))));
+        .times(Mat4.scale(0.25, 0.25, 0.25))));
     }
 
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+
+        // CAMERA SETUP
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            program_state.set_camera(this.initial_camera_location);
+            program_state.set_camera(Mat4.inverse(this.initial_camera_location));
+        }
+        if(this.attached) {
+            if (this.attached() !== this.initial_camera_location) {
+                program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.attached()))
+                  .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .1)));
+              }
         }
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
 
-        // TODO: Lighting (Requirement 2)
+         // LIGHTING SETUP
         const light_position = vec4(0, 5, 5, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
-        // TODO:  Fill in matrix operations and drawing code to draw the solar system scene (Requirements 3 and 4)
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         let model_transform = Mat4.identity();
+
+        // BACKGROUND SETUP
+        let background_m = Mat4.identity().times(Mat4.scale(200, 200, 200));
+        this.shapes.test.draw(context, program_state, background_m, this.materials.petriDish);
 
         let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
         this.virus = torus_transform;
@@ -255,7 +267,6 @@ export class Virus extends Scene {
         }));
 
         for (let i = 0; i < 10; i++) {
-            // console.log(this.infected[i]);
             if(this.infected[i] === false) {
                 this.cell_transform[i] = Mat4.identity()
                     .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
@@ -266,17 +277,11 @@ export class Virus extends Scene {
                 this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
             }
         }
-        if(this.attached) {
-            if (this.attached() !== this.initial_camera_location) {
-                program_state.set_camera(this.attached().times(Mat4.translation(0, 0, -100))
-                  .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .5)));
-            }
-        }
 
         for(let i = 0; i < this.bullets.length; i++) {
             this.removebullet = false;
             this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 2 , 0));
-            // console.log((this.bulletPositions[0])[1][3]);
+
             // check if the bullet hits a cell
             for(let j = 0; j < 10; j++) {
                 if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.3) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.3)) {
