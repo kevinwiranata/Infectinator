@@ -10,7 +10,7 @@ export class Shape_From_File extends Shape {                                   /
         super("position", "normal", "texture_coord");
         // Begin downloading the mesh. Once that completes, return
         // control to our parse_into_mesh function.
-        //this.load_file(filename);
+        // this.load_file(filename);
     }
 
     load_file(filename) {                             // Request the external file and wait for it to load.
@@ -88,7 +88,7 @@ export class Shape_From_File extends Shape {                                   /
         {
             const {verts, norms, textures} = unpacked;
             for (var j = 0; j < verts.length / 3; j++) {
-              	this.arrays.position.push(vec3(verts[3 * j], verts[3 * j + 1], verts[3 * j + 2]));
+                this.arrays.position.push(vec3(verts[3 * j], verts[3 * j + 1], verts[3 * j + 2]));
                 this.arrays.normal.push(vec3(norms[3 * j], norms[3 * j + 1], norms[3 * j + 2]));
                 this.arrays.texture_coord.push(vec(textures[2 * j], textures[2 * j + 1]));
             }
@@ -158,8 +158,13 @@ export class Virus extends Scene {
         this.removebullet = false;
         this.bulletPositions = [];
         this.virus = Mat4.identity();
-        this.initial_camera_location = Mat4.look_at(vec3(0, 0, -17.82), vec3(0, 0, 0), vec3(0, 1, 0));
-        this.attached = () => this.initial_camera_location;
+
+        // TODO: commenting this out for now, causing jerky camera movements.
+        // this.initial_camera_location = Mat4.look_at(vec3(0, 0, -17.82), vec3(0, 0, 0), vec3(0, 1, 0));
+        // this.attached = () => this.initial_camera_location;
+
+        this.torusColor = color(1,1,1,1);
+        this.radiusOfTorus = 1.25;
     }
 
     // ALREADY FIXED THE PROBLEM OF CAN ONLY CHECK DIST < 0.1
@@ -195,12 +200,12 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Fixed View", ["b"], () => this.attached = () => 
+        this.key_triggered_button("Fixed View", ["b"], () => this.attached = () =>
         Mat4.look_at(
-        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3] + 1), 
-        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]), 
+        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3] + 1),
+        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1)));
-        
+
         this.key_triggered_button("Left", ["a"], () => {
             this.torusLocation.x += -0.05
         });
@@ -226,9 +231,8 @@ export class Virus extends Scene {
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-        if (!context.scratchpad.controls) { 
+        if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            program_state.set_camera(Mat4.inverse(this.initial_camera_location));
         }
 
         program_state.projection_transform = Mat4.perspective(
@@ -245,7 +249,9 @@ export class Virus extends Scene {
         let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
         this.virus = torus_transform;
 
-        this.shapes.torus.draw(context, program_state, torus_transform, this.materials.test);
+        this.shapes.torus.draw(context, program_state, torus_transform, this.materials.test.override({
+            color: this.torusColor
+        }));
 
         for (let i = 0; i < 10; i++) {
             // console.log(this.infected[i]);
@@ -286,6 +292,32 @@ export class Virus extends Scene {
                 this.bulletPositions.shift();
                 this.bullets.shift();
             }
+        }
+
+        this.handleVirusCollision();
+    }
+
+    distanceBetweenTwoPoints(x1, y1, x2, y2) {
+        let xDiff = x1 - x2;
+        let yDiff = y1 - y2;
+        return (Math.sqrt(xDiff**2 + yDiff**2));
+    }
+
+    handleVirusCollision() {
+        let isTorusCollidedWithCells = false;
+        for (let i = 0; i < this.xpositions.length; i++) {
+            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
+            {
+                isTorusCollidedWithCells = true;
+                break;
+            }
+        }
+
+        if (isTorusCollidedWithCells) {
+            this.torusColor = color(0, 0, 1, 1);
+        }
+        else {
+            this.torusColor = color(1, 1, 1, 1);
         }
     }
 }
