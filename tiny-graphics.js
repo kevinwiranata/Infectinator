@@ -1268,14 +1268,14 @@ const Program_State = tiny.Program_State =
             Object.assign(this, defaults);
         }
 
-        set_camera(matrix) {
-            // set_camera():  Applies a new (inverted) camera matrix to the Program_State.
-            // It's often useful to cache both the camera matrix and its inverse.  Both are needed
-            // often and matrix inversion is too slow to recompute needlessly.
-            // Note that setting a camera matrix traditionally means storing the inverted version,
-            // so that's the one this function expects to receive; it automatically sets the other.
-            Object.assign(this, {camera_transform: Mat4.inverse(matrix), camera_inverse: matrix})
-        }
+  set_camera( matrix )
+    {                       // set_camera():  Applies a new (inverted) camera matrix to the Program_State.
+                            // It's often useful to cache both the camera matrix and its inverse.  Both are needed
+                            // often and matrix inversion is too slow to recompute needlessly.  
+                            // Note that setting a camera matrix traditionally means storing the inverted version, 
+                            // so that's the one this function expects to receive; it automatically sets the other.
+      Object.assign( this, { camera_transform:  matrix , camera_inverse: Mat4.inverse(matrix) } )
+    }
     }
 
 
