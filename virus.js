@@ -289,8 +289,8 @@ export class Virus extends Scene {
             if(this.removebullet === false) {
                 this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
             } else { // else we remove it from the array
-                this.bulletPositions.shift();
-                this.bullets.shift();
+                this.bulletPositions.splice(i, 1);
+                this.bullets.splice(i, 1);
             }
         }
 
