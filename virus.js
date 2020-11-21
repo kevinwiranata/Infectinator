@@ -207,16 +207,16 @@ export class Virus extends Scene {
         // vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         // vec3(0, 1, 1)));
 
-        this.key_triggered_button("Left", ["v"], () => {
+        this.key_triggered_button("Left", ["a"], () => {
             this.torusLocation.x += -0.5
         });
-        this.key_triggered_button("Right", ["n"], () => {
+        this.key_triggered_button("Right", ["d"], () => {
             this.torusLocation.x += 0.5
         });
-        this.key_triggered_button("Up", ["g"], () => {
+        this.key_triggered_button("Up", ["w"], () => {
             this.torusLocation.y += 0.5
         });
-        this.key_triggered_button("Down", ["b"], () => {
+        this.key_triggered_button("Down", ["s"], () => {
             this.torusLocation.y += -0.5
         });
         this.key_triggered_button("Shoot", ["p"], this.firebullet)
