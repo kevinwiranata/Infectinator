@@ -301,7 +301,8 @@ export class Virus extends Scene {
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
         this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
 
-        let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50).times(Mat4.translation(0,0,0.05)));
+        // let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50).times(Mat4.translation(0,0,0.05)));
+        let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
 
         // DRAW VIRUS CHARACTER
