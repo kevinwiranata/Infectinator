@@ -159,6 +159,7 @@ export class Virus extends Scene {
             test: new defs.Square(),
             circle: new defs.Regular_2D_Polygon(65, 65),
             covid: new Shape_From_File("assets/corona.obj"),
+            petri_dish: new Shape_From_File("assets/petri_dish.obj"),
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
@@ -167,7 +168,7 @@ export class Virus extends Scene {
             test: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             test2: new Material(new Gouraud_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ade6e6")}),
             ring: new Material(new Ring_Shader()),
             bullet:  new Material(new defs.Phong_Shader(), {
                 color: color(0, 0, 1, 1),
@@ -182,6 +183,7 @@ export class Virus extends Scene {
             })
         }
 
+        this.center = Mat4.identity();
         this.bullets = [];
         this.removebullet = false;
         this.bulletPositions = [];
@@ -295,7 +297,10 @@ export class Virus extends Scene {
 
         // BACKGROUND SETUP
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
-        this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
+        // this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
+        let background = Mat4.identity().times(Mat4.translation(-2.5, 0, 0).times(Mat4.scale(65, 65, 20)));
+
+        this.shapes.petri_dish.draw(context, program_state, background, this.materials.test2);
 
         // DRAW VIRUS CHARACTER
         let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
