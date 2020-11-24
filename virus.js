@@ -159,6 +159,7 @@ export class Virus extends Scene {
             test: new defs.Square(),
             circle: new defs.Regular_2D_Polygon(65, 65),
             covid: new Shape_From_File("assets/corona.obj"),
+            wall: new Shape_From_File("assets/wall.obj"),
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
@@ -294,8 +295,10 @@ export class Virus extends Scene {
         let model_transform = Mat4.identity();
 
         // BACKGROUND SETUP
-        let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
-        this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
+        let background_transform = model_transform.times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
+        let wall_transform = model_transform.times(Mat4.scale(60, 60, 6));
+        this.shapes.circle.draw(context, program_state, background_transform, this.materials.petriDish);
+        this.shapes.wall.draw(context, program_state, wall_transform, this.materials.test);
 
         // DRAW VIRUS CHARACTER
         let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
