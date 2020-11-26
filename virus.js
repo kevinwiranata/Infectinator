@@ -231,7 +231,7 @@ export class Virus extends Scene {
     // ALREADY FIXED THE PROBLEM OF CAN ONLY CHECK DIST < 0.1
     // If want them father, multiply the Math.random() by a larger number
     set_cell_xpositions(i) {
-        if(i < 5) {
+        if(i < this.numCells/2) {
             this.xpositions[i] = 10*Math.random();
         }
         else {
@@ -246,7 +246,7 @@ export class Virus extends Scene {
     }
 
     set_cell_ypositions(i) {
-        if(i < 5) {
+        if(i < this.numCells/2) {
             this.ypositions[i] = 10*Math.random();
         }
         else {
@@ -262,7 +262,7 @@ export class Virus extends Scene {
 
     set_antibody_positions(i) {
         this.antibodies[i] = new Antibody(0, 0);
-        if(i < 3) {
+        if(i < this.numAntibodies/2) {
             this.antibodies[i].x = 15*Math.random();
         }
         else {
