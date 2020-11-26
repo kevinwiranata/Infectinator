@@ -4,6 +4,13 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
+const MOVEMENT_DIRECTION = {
+    UP: 0,
+    LEFT: 1,
+    RIGHT: 2,
+    DOWN: 3
+}
+
 export class Shape_From_File extends Shape {
 	// **Shape_From_File** is a versatile standalone Shape that imports
 	// all its arrays' data from an .obj 3D model file.
@@ -130,6 +137,15 @@ export class Shape_From_File extends Shape {
 	}
 }
 
+class Antibody {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.model_transform = Mat4.identity();
+        this.direction = Math.floor(Math.random() * 4);
+    }
+}
+
 export class Virus extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -141,6 +157,10 @@ export class Virus extends Scene {
         }
         this.xpositions = [];
         this.ypositions = [];
+
+        this.antibodies = [];
+        this.numAntibodies = 5;
+
         this.cell_transform = Array(10).fill(0).map(x => Mat4.identity());
         this.infected = Array(10).fill(0).map(x => false);
         // need to start from i = 1 so that in set_cell, we won't be accessing index -1
@@ -149,6 +169,10 @@ export class Virus extends Scene {
             this.set_cell_ypositions(i-1);
         }
 
+        // Initialize antibodies
+        for (let i = 1; i <= this.numAntibodies; i++) {
+            this.set_antibody_positions(i-1);
+        }
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
@@ -177,12 +201,14 @@ export class Virus extends Scene {
                 specularity: .5
             }),
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
-                color: color(0, 0, 0, 1),
+                color: color(0, 0, 0, 0.2),
                 ambient: 1,
                 texture: new Texture("./assets/chromosome.jpg")
             }),
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
+            antibody: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")})
         }
 
         this.center = Mat4.identity();
@@ -214,6 +240,7 @@ export class Virus extends Scene {
                 this.set_cell_xpositions(i);
         }
     }
+
     set_cell_ypositions(i) {
         if(i < 5) {
             this.ypositions[i] = 10*Math.random();
@@ -226,6 +253,25 @@ export class Virus extends Scene {
             let dist = Math.abs((this.ypositions[i]) - (this.ypositions[j]));
             if (dist < 0.6)
                 this.set_cell_ypositions(i);
+        }
+    }
+
+    set_antibody_positions(i) {
+        this.antibodies[i] = new Antibody(0, 0);
+        if(i < 3) {
+            this.antibodies[i].x = 15*Math.random();
+        }
+        else {
+            this.antibodies[i].y = -15*Math.random();
+        }
+
+        for(let j = i-1; j >= 0; j--) {
+            let dist = Math.abs(this.distanceBetweenTwoPoints(this.antibodies[i].x, this.antibodies[i].y, this.antibodies[j].x, this.antibodies[j].y));
+            if (dist < 0.6)
+            {
+                this.set_antibody_positions(i);
+                break;
+            }
         }
     }
 
@@ -312,7 +358,7 @@ export class Virus extends Scene {
             color: this.torusColor}));
 
 
-        // CELLS 
+        // CELLS
         for (let i = 0; i < 10; i++) {
             if(this.infected[i] === false) {
                 this.cell_transform[i] = Mat4.identity()
@@ -353,7 +399,66 @@ export class Virus extends Scene {
             }
         }
 
+        // ANTIBODIES
+        for (let i = 0; i < this.numAntibodies; i++) {
+            let currentAntibody = this.antibodies[i];
+            let xPos = currentAntibody.x;
+            let yPos = currentAntibody.y;
+
+            // move antibody
+            this.moveAntibody(i);
+
+            this.antibodies[i].model_transform = Mat4.identity()
+                .times(Mat4.translation(xPos, yPos, 0))
+                .times(Mat4.scale(0.5, 0.5, 0.5));
+
+            this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
+        }
+
         this.handleVirusCollision();
+    }
+
+    moveAntibody(antibodyIndex) {
+        let ifChangeDirection = Math.floor(Math.random() * 9) + 1;
+        let direction; //0-3
+
+        // Keep curr direction
+        if (ifChangeDirection <= 8) {
+            direction = this.antibodies[antibodyIndex].direction;
+        }
+        // Roll for new direction
+        else {
+            direction = Math.floor(Math.random() * 4);
+            this.antibodies[antibodyIndex].direction = direction;
+        }
+
+        let currentAntibodyX = this.antibodies[antibodyIndex].x;
+        let currentAntibodyY = this.antibodies[antibodyIndex].y;
+
+        const moveLength = 0.05
+
+        switch(direction) {
+            case MOVEMENT_DIRECTION.LEFT:
+                if(this.calclulate_radius(currentAntibodyX - moveLength, currentAntibodyY) < 63) {
+                    this.antibodies[antibodyIndex].x += -moveLength
+                }
+                break;
+            case MOVEMENT_DIRECTION.RIGHT:
+                if(this.calclulate_radius(currentAntibodyX + moveLength, currentAntibodyY) < 63) {
+                    this.antibodies[antibodyIndex].x += moveLength
+                }
+                break;
+            case MOVEMENT_DIRECTION.UP:
+                if(this.calclulate_radius(currentAntibodyX, currentAntibodyY + moveLength) < 63) {
+                    this.antibodies[antibodyIndex].y += moveLength
+                }
+                break;
+            case MOVEMENT_DIRECTION.DOWN:
+                if(this.calclulate_radius(currentAntibodyX, currentAntibodyY - moveLength) < 63) {
+                    this.antibodies[antibodyIndex].y += -moveLength
+                }
+                break;
+        }
     }
 
     distanceBetweenTwoPoints(x1, y1, x2, y2) {
