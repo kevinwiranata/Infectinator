@@ -341,8 +341,8 @@ export class Virus extends Scene {
             Math.PI / 4, context.width / context.height, .1, 1000);
 
          // LIGHTING SETUP
-        const light_position = vec4(0, 5, 5, 1);
-        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
+        const light_position = vec4(0, 0, 5, 1);
+        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 5000)];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         let model_transform = Mat4.identity();
@@ -439,7 +439,7 @@ export class Virus extends Scene {
     }
 
     moveAntibody(antibodyIndex) {
-        const moveLength = 0.3;
+        const moveLength = 0.1;
         let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
         let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
 
@@ -459,20 +459,20 @@ export class Virus extends Scene {
     }
 
     handleVirusCollision() {
-        let isTorusCollidedWithCells = false;
         for (let i = 0; i < this.xpositions.length; i++) {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
             {
-                isTorusCollidedWithCells = true;
-                break;
+                this.infected[i] = true;
             }
         }
 
-        if (isTorusCollidedWithCells) {
-            this.torusColor = color(0, 0, 1, 1);
-        }
-        else {
-            this.torusColor = color(1, 0, 0, 1);
+        for (let i = 0; i < this.numAntibodies; i++) {
+            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
+            {
+                // TODO: Need to show game over screen. right now only turns virus color to blue
+                this.torusColor = color(0, 0, 1, 1);
+                break;
+            }
         }
     }
 }
