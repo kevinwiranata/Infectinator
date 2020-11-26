@@ -422,11 +422,11 @@ export class Virus extends Scene {
         let ifChangeDirection = Math.floor(Math.random() * 9) + 1;
         let direction; //0-3
 
-        // Keep curr direction
+        // 80% chance to keep curr direction
         if (ifChangeDirection <= 8) {
             direction = this.antibodies[antibodyIndex].direction;
         }
-        // Roll for new direction
+        // 20% chance to roll for new direction
         else {
             direction = Math.floor(Math.random() * 4);
             this.antibodies[antibodyIndex].direction = direction;
