@@ -4,6 +4,13 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
+const MOVEMENT_DIRECTION = {
+    UP: 0,
+    LEFT: 1,
+    RIGHT: 2,
+    DOWN: 3
+}
+
 export class Shape_From_File extends Shape {
 	// **Shape_From_File** is a versatile standalone Shape that imports
 	// all its arrays' data from an .obj 3D model file.
@@ -130,6 +137,15 @@ export class Shape_From_File extends Shape {
 	}
 }
 
+class Antibody {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.model_transform = Mat4.identity();
+        this.angle = Math.floor(Math.random() * 360);
+    }
+}
+
 export class Virus extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -141,14 +157,26 @@ export class Virus extends Scene {
         }
         this.xpositions = [];
         this.ypositions = [];
-        this.cell_transform = Array(10).fill(0).map(x => Mat4.identity());
-        this.infected = Array(10).fill(0).map(x => false);
+
+        this.antibodies = [];
+        this.numAntibodies = 5;
+
+        this.numCells = 10;
+
+        this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
+        this.cell_angle = Array(this.numCells).fill(0);
+        this.infected = Array(this.numCells).fill(0).map(x => false);
         // need to start from i = 1 so that in set_cell, we won't be accessing index -1
-        for(let i = 1; i < 11; i++) {
+        for(let i = 1; i <= this.numCells; i++) {
             this.set_cell_xpositions(i-1);
             this.set_cell_ypositions(i-1);
+            this.cell_angle[i-1] = Math.floor(Math.random() * 360);
         }
 
+        // Initialize antibodies
+        for (let i = 1; i <= this.numAntibodies; i++) {
+            this.set_antibody_positions(i-1);
+        }
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
@@ -177,12 +205,14 @@ export class Virus extends Scene {
                 specularity: .5
             }),
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
-                color: color(0, 0, 0, 1),
+                color: color(0, 0, 0, 0.2),
                 ambient: 1,
                 texture: new Texture("./assets/chromosome.jpg")
             }),
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
+            antibody: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")})
         }
 
         this.center = Mat4.identity();
@@ -201,7 +231,7 @@ export class Virus extends Scene {
     // ALREADY FIXED THE PROBLEM OF CAN ONLY CHECK DIST < 0.1
     // If want them father, multiply the Math.random() by a larger number
     set_cell_xpositions(i) {
-        if(i < 5) {
+        if(i < this.numCells/2) {
             this.xpositions[i] = 10*Math.random();
         }
         else {
@@ -214,8 +244,9 @@ export class Virus extends Scene {
                 this.set_cell_xpositions(i);
         }
     }
+
     set_cell_ypositions(i) {
-        if(i < 5) {
+        if(i < this.numCells/2) {
             this.ypositions[i] = 10*Math.random();
         }
         else {
@@ -226,6 +257,25 @@ export class Virus extends Scene {
             let dist = Math.abs((this.ypositions[i]) - (this.ypositions[j]));
             if (dist < 0.6)
                 this.set_cell_ypositions(i);
+        }
+    }
+
+    set_antibody_positions(i) {
+        this.antibodies[i] = new Antibody(0, 0);
+        if(i < this.numAntibodies/2) {
+            this.antibodies[i].x = 15*Math.random();
+        }
+        else {
+            this.antibodies[i].y = -15*Math.random();
+        }
+
+        for(let j = i-1; j >= 0; j--) {
+            let dist = Math.abs(this.distanceBetweenTwoPoints(this.antibodies[i].x, this.antibodies[i].y, this.antibodies[j].x, this.antibodies[j].y));
+            if (dist < 0.6)
+            {
+                this.set_antibody_positions(i);
+                break;
+            }
         }
     }
 
@@ -291,8 +341,8 @@ export class Virus extends Scene {
             Math.PI / 4, context.width / context.height, .1, 1000);
 
          // LIGHTING SETUP
-        const light_position = vec4(0, 5, 5, 1);
-        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
+        const light_position = vec4(0, 0, 5, 1);
+        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 5000)];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         let model_transform = Mat4.identity();
@@ -312,12 +362,14 @@ export class Virus extends Scene {
             color: this.torusColor}));
 
 
-        // CELLS 
-        for (let i = 0; i < 10; i++) {
+        // CELLS
+        for (let i = 0; i < this.numCells; i++) {
             if(this.infected[i] === false) {
+                // Move cells
+                this.moveCells(i);
                 this.cell_transform[i] = Mat4.identity()
-                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
-                    .times(Mat4.scale(0.3, 0.3, 0.3))
+                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
+                    // .times(Mat4.scale(0.3, 0.3, 0.3))
                 this.shapes.sphere.draw(context, program_state, this.cell_transform[i], this.materials.test);
             }
             else {
@@ -353,7 +405,51 @@ export class Virus extends Scene {
             }
         }
 
+        // ANTIBODIES
+        for (let i = 0; i < this.numAntibodies; i++) {
+            // move antibody
+            this.moveAntibody(i);
+
+            let currentAntibody = this.antibodies[i];
+            let xPos = currentAntibody.x;
+            let yPos = currentAntibody.y;
+
+            this.antibodies[i].model_transform = Mat4.identity()
+                .times(Mat4.translation(xPos, yPos, 0))
+                .times(Mat4.scale(0.5, 0.5, 0.5));
+
+            this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
+        }
+
         this.handleVirusCollision();
+    }
+
+    moveCells(cellIndex) {
+        const moveLength = 0.1;
+        let nextX = this.xpositions[cellIndex]+ moveLength*Math.cos(this.cell_angle[cellIndex]);
+        let nextY = this.ypositions[cellIndex]+ moveLength*Math.sin(this.cell_angle[cellIndex]);
+
+        // if collides with circumference of petri dish
+        if(this.calclulate_radius(nextX, nextY) >= 63) {
+            this.cell_angle[cellIndex] += 180;
+        }
+
+        this.xpositions[cellIndex] += moveLength*Math.cos(this.cell_angle[cellIndex]);
+        this.ypositions[cellIndex] += moveLength*Math.sin(this.cell_angle[cellIndex]);
+    }
+
+    moveAntibody(antibodyIndex) {
+        const moveLength = 0.1;
+        let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
+        let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
+
+        // if collides with circumference of petri dish
+        if(this.calclulate_radius(nextX, nextY) >= 63) {
+            this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
+        }
+
+        this.antibodies[antibodyIndex].x += moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
+        this.antibodies[antibodyIndex].y += moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
     }
 
     distanceBetweenTwoPoints(x1, y1, x2, y2) {
@@ -363,20 +459,20 @@ export class Virus extends Scene {
     }
 
     handleVirusCollision() {
-        let isTorusCollidedWithCells = false;
         for (let i = 0; i < this.xpositions.length; i++) {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
             {
-                isTorusCollidedWithCells = true;
-                break;
+                this.infected[i] = true;
             }
         }
 
-        if (isTorusCollidedWithCells) {
-            this.torusColor = color(0, 0, 1, 1);
-        }
-        else {
-            this.torusColor = color(1, 0, 0, 1);
+        for (let i = 0; i < this.numAntibodies; i++) {
+            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
+            {
+                // TODO: Need to show game over screen. right now only turns virus color to blue
+                this.torusColor = color(0, 0, 1, 1);
+                break;
+            }
         }
     }
 }
