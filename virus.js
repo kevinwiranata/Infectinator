@@ -143,6 +143,7 @@ class Antibody {
         this.y = y;
         this.model_transform = Mat4.identity();
         this.direction = Math.floor(Math.random() * 4);
+        this.angle = Math.floor(Math.random() * 360);
     }
 }
 
@@ -401,12 +402,12 @@ export class Virus extends Scene {
 
         // ANTIBODIES
         for (let i = 0; i < this.numAntibodies; i++) {
+            // move antibody
+            this.moveAntibody(i);
+
             let currentAntibody = this.antibodies[i];
             let xPos = currentAntibody.x;
             let yPos = currentAntibody.y;
-
-            // move antibody
-            this.moveAntibody(i);
 
             this.antibodies[i].model_transform = Mat4.identity()
                 .times(Mat4.translation(xPos, yPos, 0))
@@ -419,46 +420,17 @@ export class Virus extends Scene {
     }
 
     moveAntibody(antibodyIndex) {
-        let ifChangeDirection = Math.floor(Math.random() * 9) + 1;
-        let direction; //0-3
+        const moveLength = 0.3;
+        let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
+        let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
 
-        // 80% chance to keep curr direction
-        if (ifChangeDirection <= 8) {
-            direction = this.antibodies[antibodyIndex].direction;
-        }
-        // 20% chance to roll for new direction
-        else {
-            direction = Math.floor(Math.random() * 4);
-            this.antibodies[antibodyIndex].direction = direction;
+        // if collides with circumference of petri dish
+        if(this.calclulate_radius(nextX, nextY) >= 63) {
+            this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
         }
 
-        let currentAntibodyX = this.antibodies[antibodyIndex].x;
-        let currentAntibodyY = this.antibodies[antibodyIndex].y;
-
-        const moveLength = 0.05
-
-        switch(direction) {
-            case MOVEMENT_DIRECTION.LEFT:
-                if(this.calclulate_radius(currentAntibodyX - moveLength, currentAntibodyY) < 63) {
-                    this.antibodies[antibodyIndex].x += -moveLength
-                }
-                break;
-            case MOVEMENT_DIRECTION.RIGHT:
-                if(this.calclulate_radius(currentAntibodyX + moveLength, currentAntibodyY) < 63) {
-                    this.antibodies[antibodyIndex].x += moveLength
-                }
-                break;
-            case MOVEMENT_DIRECTION.UP:
-                if(this.calclulate_radius(currentAntibodyX, currentAntibodyY + moveLength) < 63) {
-                    this.antibodies[antibodyIndex].y += moveLength
-                }
-                break;
-            case MOVEMENT_DIRECTION.DOWN:
-                if(this.calclulate_radius(currentAntibodyX, currentAntibodyY - moveLength) < 63) {
-                    this.antibodies[antibodyIndex].y += -moveLength
-                }
-                break;
-        }
+        this.antibodies[antibodyIndex].x += moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
+        this.antibodies[antibodyIndex].y += moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
     }
 
     distanceBetweenTwoPoints(x1, y1, x2, y2) {
