@@ -142,7 +142,6 @@ class Antibody {
         this.x = x;
         this.y = y;
         this.model_transform = Mat4.identity();
-        this.direction = Math.floor(Math.random() * 4);
         this.angle = Math.floor(Math.random() * 360);
     }
 }
@@ -162,12 +161,16 @@ export class Virus extends Scene {
         this.antibodies = [];
         this.numAntibodies = 5;
 
-        this.cell_transform = Array(10).fill(0).map(x => Mat4.identity());
-        this.infected = Array(10).fill(0).map(x => false);
+        this.numCells = 10;
+
+        this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
+        this.cell_angle = Array(this.numCells).fill(0);
+        this.infected = Array(this.numCells).fill(0).map(x => false);
         // need to start from i = 1 so that in set_cell, we won't be accessing index -1
-        for(let i = 1; i < 11; i++) {
+        for(let i = 1; i <= this.numCells; i++) {
             this.set_cell_xpositions(i-1);
             this.set_cell_ypositions(i-1);
+            this.cell_angle[i-1] = Math.floor(Math.random() * 360);
         }
 
         // Initialize antibodies
@@ -360,11 +363,13 @@ export class Virus extends Scene {
 
 
         // CELLS
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < this.numCells; i++) {
             if(this.infected[i] === false) {
+                // Move cells
+                this.moveCells(i);
                 this.cell_transform[i] = Mat4.identity()
-                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
-                    .times(Mat4.scale(0.3, 0.3, 0.3))
+                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
+                    // .times(Mat4.scale(0.3, 0.3, 0.3))
                 this.shapes.sphere.draw(context, program_state, this.cell_transform[i], this.materials.test);
             }
             else {
@@ -417,6 +422,20 @@ export class Virus extends Scene {
         }
 
         this.handleVirusCollision();
+    }
+
+    moveCells(cellIndex) {
+        const moveLength = 0.1;
+        let nextX = this.xpositions[cellIndex]+ moveLength*Math.cos(this.cell_angle[cellIndex]);
+        let nextY = this.ypositions[cellIndex]+ moveLength*Math.sin(this.cell_angle[cellIndex]);
+
+        // if collides with circumference of petri dish
+        if(this.calclulate_radius(nextX, nextY) >= 63) {
+            this.cell_angle[cellIndex] += 180;
+        }
+
+        this.xpositions[cellIndex] += moveLength*Math.cos(this.cell_angle[cellIndex]);
+        this.ypositions[cellIndex] += moveLength*Math.sin(this.cell_angle[cellIndex]);
     }
 
     moveAntibody(antibodyIndex) {
