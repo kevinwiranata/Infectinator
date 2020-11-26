@@ -4,105 +4,130 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
-export class Shape_From_File extends Shape {                                   // **Shape_From_File** is a versatile standalone Shape that imports
-                                                                               // all its arrays' data from an .obj 3D model file.
-    constructor(filename) {
-        super("position", "normal", "texture_coord");
-        // Begin downloading the mesh. Once that completes, return
-        // control to our parse_into_mesh function.
-        // this.load_file(filename);
-    }
+export class Shape_From_File extends Shape {
+	// **Shape_From_File** is a versatile standalone Shape that imports
+	// all its arrays' data from an .obj 3D model file.
+	constructor(filename) {
+		super("position", "normal", "texture_coord");
+		// Begin downloading the mesh. Once that completes, return
+		// control to our parse_into_mesh function.
+		this.load_file(filename);
+	}
 
-    load_file(filename) {                             // Request the external file and wait for it to load.
-        // Failure mode:  Loads an empty shape.
-        return fetch(filename)
-            .then(response => {
-                if (response.ok) return Promise.resolve(response.text())
-                else return Promise.reject(response.status)
-            })
-            .then(obj_file_contents => this.parse_into_mesh(obj_file_contents))
-            .catch(error => {
-                this.copy_onto_graphics_card(this.gl);
-            })
-    }
+	load_file(filename) {
+		// Request the external file and wait for it to load.
+		// Failure mode:  Loads an empty shape.
+		return fetch(filename)
+			.then((response) => {
+				if (response.ok) return Promise.resolve(response.text());
+				else return Promise.reject(response.status);
+			})
+			.then((obj_file_contents) => this.parse_into_mesh(obj_file_contents))
+			.catch((error) => {
+				this.copy_onto_graphics_card(this.gl);
+			});
+	}
 
-    parse_into_mesh(data) {                           // Adapted from the "webgl-obj-loader.js" library found online:
-        var verts = [], vertNormals = [], textures = [], unpacked = {};
+	parse_into_mesh(data) {
+		// Adapted from the "webgl-obj-loader.js" library found online:
+		var verts = [],
+			vertNormals = [],
+			textures = [],
+			unpacked = {};
 
-        unpacked.verts = [];
-        unpacked.norms = [];
-        unpacked.textures = [];
-        unpacked.hashindices = {};
-        unpacked.indices = [];
-        unpacked.index = 0;
+		unpacked.verts = [];
+		unpacked.norms = [];
+		unpacked.textures = [];
+		unpacked.hashindices = {};
+		unpacked.indices = [];
+		unpacked.index = 0;
 
-        var lines = data.split('\n');
+		var lines = data.split("\n");
 
-        var VERTEX_RE = /^v\s/;
-        var NORMAL_RE = /^vn\s/;
-        var TEXTURE_RE = /^vt\s/;
-        var FACE_RE = /^f\s/;
-        var WHITESPACE_RE = /\s+/;
+		var VERTEX_RE = /^v\s/;
+		var NORMAL_RE = /^vn\s/;
+		var TEXTURE_RE = /^vt\s/;
+		var FACE_RE = /^f\s/;
+		var WHITESPACE_RE = /\s+/;
 
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
-            var elements = line.split(WHITESPACE_RE);
-            elements.shift();
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i].trim();
+			var elements = line.split(WHITESPACE_RE);
+			elements.shift();
 
-            if (VERTEX_RE.test(line)) verts.push.apply(verts, elements);
-            else if (NORMAL_RE.test(line)) vertNormals.push.apply(vertNormals, elements);
-            else if (TEXTURE_RE.test(line)) textures.push.apply(textures, elements);
-            else if (FACE_RE.test(line)) {
-                var quad = false;
-                for (var j = 0, eleLen = elements.length; j < eleLen; j++) {
-                    if (j === 3 && !quad) {
-                        j = 2;
-                        quad = true;
-                    }
-                    if (elements[j] in unpacked.hashindices)
-                        unpacked.indices.push(unpacked.hashindices[elements[j]]);
-                    else {
-                        var vertex = elements[j].split('/');
+			if (VERTEX_RE.test(line)) verts.push.apply(verts, elements);
+			else if (NORMAL_RE.test(line))
+				vertNormals.push.apply(vertNormals, elements);
+			else if (TEXTURE_RE.test(line)) textures.push.apply(textures, elements);
+			else if (FACE_RE.test(line)) {
+				var quad = false;
+				for (var j = 0, eleLen = elements.length; j < eleLen; j++) {
+					if (j === 3 && !quad) {
+						j = 2;
+						quad = true;
+					}
+					if (elements[j] in unpacked.hashindices)
+						unpacked.indices.push(unpacked.hashindices[elements[j]]);
+					else {
+						var vertex = elements[j].split("/");
 
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
+						unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
+						unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);
+						unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
 
-                        if (textures.length) {
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 0]);
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 1]);
-                        }
+						if (textures.length) {
+							unpacked.textures.push(
+								+textures[(vertex[1] - 1 || vertex[0]) * 2 + 0]
+							);
+							unpacked.textures.push(
+								+textures[(vertex[1] - 1 || vertex[0]) * 2 + 1]
+							);
+						}
 
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 0]);
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 1]);
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 2]);
+						unpacked.norms.push(
+							+vertNormals[(vertex[2] - 1 || vertex[0]) * 3 + 0]
+						);
+						unpacked.norms.push(
+							+vertNormals[(vertex[2] - 1 || vertex[0]) * 3 + 1]
+						);
+						unpacked.norms.push(
+							+vertNormals[(vertex[2] - 1 || vertex[0]) * 3 + 2]
+						);
 
-                        unpacked.hashindices[elements[j]] = unpacked.index;
-                        unpacked.indices.push(unpacked.index);
-                        unpacked.index += 1;
-                    }
-                    if (j === 3 && quad) unpacked.indices.push(unpacked.hashindices[elements[0]]);
-                }
-            }
-        }
-        {
-            const {verts, norms, textures} = unpacked;
-            for (var j = 0; j < verts.length / 3; j++) {
-                this.arrays.position.push(vec3(verts[3 * j], verts[3 * j + 1], verts[3 * j + 2]));
-                this.arrays.normal.push(vec3(norms[3 * j], norms[3 * j + 1], norms[3 * j + 2]));
-                this.arrays.texture_coord.push(vec(textures[2 * j], textures[2 * j + 1]));
-            }
-            this.indices = unpacked.indices;
-        }
-        this.normalize_positions(false);
-        this.ready = true;
-    }
+						unpacked.hashindices[elements[j]] = unpacked.index;
+						unpacked.indices.push(unpacked.index);
+						unpacked.index += 1;
+					}
+					if (j === 3 && quad)
+						unpacked.indices.push(unpacked.hashindices[elements[0]]);
+				}
+			}
+		}
+		{
+			const { verts, norms, textures } = unpacked;
+			for (var j = 0; j < verts.length / 3; j++) {
+				this.arrays.position.push(
+					vec3(verts[3 * j], verts[3 * j + 1], verts[3 * j + 2])
+				);
+				this.arrays.normal.push(
+					vec3(norms[3 * j], norms[3 * j + 1], norms[3 * j + 2])
+				);
+				this.arrays.texture_coord.push(
+					vec(textures[2 * j], textures[2 * j + 1])
+				);
+			}
+			this.indices = unpacked.indices;
+		}
+		this.normalize_positions(false);
+		this.ready = true;
+	}
 
-    draw(context, program_state, model_transform, material) {               // draw(): Same as always for shapes, but cancel all
-        // attempts to draw the shape before it loads:
-        if (this.ready)
-            super.draw(context, program_state, model_transform, material);
-    }
+	draw(context, program_state, model_transform, material) {
+		// draw(): Same as always for shapes, but cancel all
+		// attempts to draw the shape before it loads:
+		if (this.ready)
+			super.draw(context, program_state, model_transform, material);
+	}
 }
 
 export class Virus extends Scene {
@@ -127,21 +152,23 @@ export class Virus extends Scene {
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
-            bullet: new defs.Subdivision_Sphere(4),
+            bullet: new Shape_From_File("assets/virus.obj"),
             torus: new defs.Torus(15, 15),
             torus2: new defs.Torus(3, 15),
             sphere: new defs.Subdivision_Sphere(4),
             test: new defs.Square(),
-            circle: new defs.Regular_2D_Polygon(1, 15),
-            covid: new Shape_From_File("assets/Covid_Virus _OBJ.obj"),
+            circle: new defs.Regular_2D_Polygon(65, 65),
+            covid: new Shape_From_File("assets/corona.obj"),
+            petri_dish: new Shape_From_File("assets/wall.obj"),
         };
+        this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
         // *** Materials
         this.materials = {
             test: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             test2: new Material(new Gouraud_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#992828")}),
+                {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
             ring: new Material(new Ring_Shader()),
             bullet:  new Material(new defs.Phong_Shader(), {
                 color: color(0, 0, 1, 1),
@@ -152,10 +179,13 @@ export class Virus extends Scene {
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
                 color: color(0, 0, 0, 1),
                 ambient: 1,
-                texture: new Texture("./assets/dish.png")
-            })
+                texture: new Texture("./assets/chromosome.jpg")
+            }),
+            wall: new Material(new Gouraud_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
         }
 
+        this.center = Mat4.identity();
         this.bullets = [];
         this.removebullet = false;
         this.bulletPositions = [];
@@ -199,6 +229,10 @@ export class Virus extends Scene {
         }
     }
 
+    calclulate_radius(x, y) {
+        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    }
+
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         // this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
@@ -208,16 +242,24 @@ export class Virus extends Scene {
         // vec3(0, 1, 1)));
 
         this.key_triggered_button("Left", ["a"], () => {
-            this.torusLocation.x += -0.5
+            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
+                this.torusLocation.x += -0.5
+            }
         });
         this.key_triggered_button("Right", ["d"], () => {
-            this.torusLocation.x += 0.5
+            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
+                this.torusLocation.x += 0.5
+            }
         });
         this.key_triggered_button("Up", ["w"], () => {
-            this.torusLocation.y += 0.5
+            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
+                this.torusLocation.y += 0.5
+            }
         });
         this.key_triggered_button("Down", ["s"], () => {
-            this.torusLocation.y += -0.5
+            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
+                this.torusLocation.y += -0.5
+            }
         });
         this.key_triggered_button("Shoot", ["p"], this.firebullet)
     }
@@ -226,7 +268,7 @@ export class Virus extends Scene {
         this.bullets.push(this.materials.bullet);
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
-        .times(Mat4.scale(0.25, 0.25, 0.25))));
+        .times(Mat4.scale(0.33, 0.33, 0.33))));
     }
 
     display(context, program_state) {
@@ -238,15 +280,12 @@ export class Virus extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             //program_state.set_camera(Mat4.inverse(this.initial_camera_location));
         }
-
         this.camera_matrix = Mat4.look_at(
         vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1));
-
         program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
-        .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .1)));
-
+        .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .035)));
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
@@ -259,16 +298,21 @@ export class Virus extends Scene {
         let model_transform = Mat4.identity();
 
         // BACKGROUND SETUP
-        let background_m = Mat4.identity().times(Mat4.scale(200, 200, 200));
-        this.shapes.test.draw(context, program_state, background_m, this.materials.petriDish);
+        let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
+        this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
 
+        // let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50).times(Mat4.translation(0,0,0.05)));
+        let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
+        this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
+
+        // DRAW VIRUS CHARACTER
         let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
         this.virus = torus_transform;
+        this.shapes.covid.draw(context, program_state, torus_transform, this.materials.test.override({
+            color: this.torusColor}));
 
-        this.shapes.torus.draw(context, program_state, torus_transform, this.materials.test.override({
-            color: this.torusColor
-        }));
 
+        // CELLS 
         for (let i = 0; i < 10; i++) {
             if(this.infected[i] === false) {
                 this.cell_transform[i] = Mat4.identity()
@@ -281,9 +325,10 @@ export class Virus extends Scene {
             }
         }
 
+        // PROTEIN BULELTS
         for(let i = 0; i < this.bullets.length; i++) {
             this.removebullet = false;
-            this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 2 , 0));
+            this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5 , 0));
 
             // check if the bullet hits a cell
             for(let j = 0; j < 10; j++) {
@@ -294,6 +339,11 @@ export class Virus extends Scene {
                     }
                 }
             }
+            let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
+            if(radius > 64) {
+                this.removebullet = true;
+            }
+
             // if not out of bounds and doesn't hit a cell
             if(this.removebullet === false) {
                 this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
@@ -326,7 +376,7 @@ export class Virus extends Scene {
             this.torusColor = color(0, 0, 1, 1);
         }
         else {
-            this.torusColor = color(1, 1, 1, 1);
+            this.torusColor = color(1, 0, 0, 1);
         }
     }
 }
@@ -517,4 +567,3 @@ class Ring_Shader extends Shader {
         }`;
     }
 }
-
