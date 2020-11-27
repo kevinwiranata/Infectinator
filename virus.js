@@ -221,6 +221,10 @@ export class Virus extends Scene {
                 ambient: 1,
                 texture: new Texture("./assets/chromosome.jpg")
             }),
+            covid: new Material(new defs.Textured_Phong(1), {
+                diffusivity: 1.0, specularity: 1.0, ambient: 1.0,
+                texture: new Texture("./assets/corona.png")
+            }),
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
             antibody: new Material(new defs.Phong_Shader(),
@@ -228,7 +232,17 @@ export class Virus extends Scene {
             cell: new Material(new defs.Textured_Phong(1), {
                 color: color(1, 0, 0, 1),
                 diffusivity: 1.0, specularity: 0.5, ambient: 0.1,
-                texture: new Texture("./assets/cell.obj")}),
+                texture: new Texture("./assets/cell.png")}),
+            welcome: new Material(new defs.Textured_Phong(1), {
+                    color: color(0, 0, 0, 1),
+                    ambient: 1,
+                    texture: new Texture("./assets/welcome.png")
+                }),
+            },
+
+        // sounds
+        this.sounds = {
+            minor_circuit: new Audio("assets/minor_circuit.mp3"),
         }
 
         this.center = Mat4.identity();
@@ -343,6 +357,17 @@ export class Virus extends Scene {
         this.bulletsOgY[this.bullets.length-2] = this.torusLocation.y;
     }
 
+    play_music(title) {
+        console.log(title);
+        this.sounds[title].volume = 0.2;
+        this.sounds[title].loop = true;
+        this.sounds[title].play();
+    }
+
+    stop_music(title) {
+        this.sounds[title].pause();
+    }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -363,7 +388,7 @@ export class Virus extends Scene {
             Math.PI / 4, context.width / context.height, .1, 1000);
 
          // LIGHTING SETUP
-        const light_position = vec4(0, 0, 5, 1);
+        const light_position = vec4(0, 0, 0, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 5000)];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
@@ -381,18 +406,33 @@ export class Virus extends Scene {
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
 
         if(!this.start) {
-            let welcome_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
-            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
+            this.play_music("minor_circuit");
+            let welcome_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);
         }
-        else {
 
+        // GAME WON
+        else if (this.won) {
+            let won_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
+            this.shapes.square.draw(context, program_state, won_transform, this.materials.test);
+        } 
+
+        // GAME OVER
+        else if (this.gameOver) {
+            let game_over_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
+            this.shapes.square.draw(context, program_state, game_over_transform, this.materials.test);
+        }
+
+        // GAME IN PROGRESS
+        else {
+            this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
             let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0))
             this.virus = torus_transform;
-            this.shapes.covid.draw(context, program_state, torus_transform, this.materials.test.override({
-                color: this.torusColor
-            }));
-
+            this.shapes.covid.draw(context, program_state, torus_transform, this.materials.covid);
 
             // CELLS
             for (let i = 0; i < this.numCells; i++) {
@@ -429,7 +469,7 @@ export class Virus extends Scene {
                     }
                 }
                 let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
-                if (radius > 64 || (this.bulletPositions[i][1][3] - this.bulletsOgY[i] >= 20)) {
+                if (radius > 64) {
                     this.removebullet = true;
                 }
 
