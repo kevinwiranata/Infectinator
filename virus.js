@@ -146,6 +146,13 @@ class Antibody {
     }
 }
 
+class Zombie {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.floor(Math.random() * 360);
+    }
+}
 export class Virus extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -160,6 +167,8 @@ export class Virus extends Scene {
 
         this.antibodies = [];
         this.numAntibodies = 5;
+
+        this.zombies = [];
 
         this.numCells = 10;
 
@@ -190,6 +199,7 @@ export class Virus extends Scene {
             cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
+            // microscope: new Shape_From_File("assets/microscope.obj")
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
@@ -218,13 +228,14 @@ export class Virus extends Scene {
             cell: new Material(new defs.Textured_Phong(1), {
                 color: color(1, 0, 0, 1),
                 diffusivity: 1.0, specularity: 0.5, ambient: 0.1,
-                texture: new Texture("./assets/cell.png")})
+                texture: new Texture("./assets/cell.obj")}),
         }
 
         this.center = Mat4.identity();
         this.bullets = [];
         this.removebullet = false;
         this.bulletPositions = [];
+        this.bulletsOgY = [];
         this.virus = Mat4.identity();
         this.start = false;
         this.won = false;
@@ -329,6 +340,7 @@ export class Virus extends Scene {
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
         .times(Mat4.scale(0.33, 0.33, 0.33))));
+        this.bulletsOgY[this.bullets.length-2] = this.torusLocation.y;
     }
 
     display(context, program_state) {
@@ -357,6 +369,9 @@ export class Virus extends Scene {
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         let model_transform = Mat4.identity();
 
+        // let microscope_transform = Mat4.identity();
+        // this.shapes.microscope.draw(context, program_state, microscope_transform, this.materials.test);
+
         // BACKGROUND SETUP
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
         this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
@@ -381,17 +396,17 @@ export class Virus extends Scene {
 
             // CELLS
             for (let i = 0; i < this.numCells; i++) {
-                if (this.infected[i] === false) {
+                // if (this.infected[i] === false) {
                     // Move cells
                     this.moveCells(i);
                     this.cell_transform[i] = Mat4.identity()
-                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
+                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
                         .times(Mat4.scale(0.5,0.5,0.5))
                     // .times(Mat4.scale(0.3, 0.3, 0.3))
                     this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
-                } else {
-                    this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
-                }
+                // } else {
+                //     this.zombies.push(new Zombie(this.xpositions[i], this.ypositions[i]));
+                // }
             }
 
             // PROTEIN BULELTS
@@ -400,16 +415,21 @@ export class Virus extends Scene {
                 this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5, 0));
 
                 // check if the bullet hits a cell
-                for (let j = 0; j < 10; j++) {
-                    if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.4) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.4)) {
-                        if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.4) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.4)) {
-                            this.infected[j] = true;
+                for (let j = 0; j < this.numCells; j++) {
+                    if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
+                        if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.5) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.5)) {
+                            this.addZombie(this.xpositions[j], this.ypositions[j], context, program_state);
+
+                            this.xpositions.splice(j,1);
+                            this.ypositions.splice(j,1);
+                            this.numCells--;
+                            // this.infected[j] = true;
                             this.removebullet = true;
                         }
                     }
                 }
                 let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
-                if (radius > 64) {
+                if (radius > 64 || (this.bulletPositions[i][1][3] - this.bulletsOgY[i] >= 20)) {
                     this.removebullet = true;
                 }
 
@@ -419,7 +439,15 @@ export class Virus extends Scene {
                 } else { // else we remove it from the array
                     this.bulletPositions.splice(i, 1);
                     this.bullets.splice(i, 1);
+                    this.bulletsOgY.splice(i, 1);
                 }
+            }
+
+            // ZOMBIES
+            for(let i = 0; i < this.zombies.length; i++) {
+                this.moveZombie(i);
+                this.zombie_transform = Mat4.identity().times(Mat4.translation(this.zombies[i].x, this.zombies[i].y, 1))
+                this.shapes.torus.draw(context, program_state, this.zombie_transform, this.materials.test);
             }
 
             // ANTIBODIES
@@ -438,8 +466,16 @@ export class Virus extends Scene {
                 this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
             }
 
-            this.handleVirusCollision();
+            this.handleVirusCollision(context, program_state);
         }
+    }
+
+    addZombie(x, y, context, program_state) {
+        this.zombies.push(new Zombie(x, y));
+        // console.log(this.zombies[(this.zombies.length)-1].x);
+        this.zombie_transform = Mat4.identity()
+            .times(Mat4.translation(this.zombies[(this.zombies.length) - 1].x, this.zombies[(this.zombies.length) - 1].y, 0));
+        this.shapes.torus.draw(context, program_state, this.zombie_transform, this.materials.test);
     }
 
     moveCells(cellIndex) {
@@ -454,6 +490,20 @@ export class Virus extends Scene {
 
         this.xpositions[cellIndex] += moveLength*Math.cos(this.cell_angle[cellIndex]);
         this.ypositions[cellIndex] += moveLength*Math.sin(this.cell_angle[cellIndex]);
+    }
+
+    moveZombie(zombieIndex) {
+        const moveLength = 0.35;
+        let nextX = this.zombies[zombieIndex].x + moveLength*Math.cos(this.zombies[zombieIndex].angle);
+        let nextY = this.zombies[zombieIndex].y + moveLength*Math.sin(this.zombies[zombieIndex].angle);
+
+        // if collides with circumference of petri dish
+        if(this.calclulate_radius(nextX, nextY) >= 63) {
+            this.zombies[zombieIndex].angle = (this.zombies[zombieIndex].angle + 180);
+        }
+
+        this.zombies[zombieIndex].x += moveLength*Math.cos(this.zombies[zombieIndex].angle);
+        this.zombies[zombieIndex].y += moveLength*Math.sin(this.zombies[zombieIndex].angle);
     }
 
     moveAntibody(antibodyIndex) {
@@ -476,14 +526,24 @@ export class Virus extends Scene {
         return (Math.sqrt(xDiff**2 + yDiff**2));
     }
 
-    handleVirusCollision() {
-        for (let i = 0; i < this.xpositions.length; i++) {
-            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
+    handleVirusCollision(context, program_state) {
+        // zombie-cell collision
+        // TODO: Change torus stuff to zombie
+        // for (let i = 0; i < this.xpositions.length; i++) {
+        //     if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
+        //     {
+        //         this.addZombie(this.xpositions[i], this.ypositions[i], context, program_state);
+        //     }
+        // }
+        // virus-antibody collision
+        for (let i = 0; i < this.zombies.length; i++) {
+            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.zombies[i].x, this.zombies[i].y) <= this.radiusOfTorus)
             {
-                this.infected[i] = true;
+                // TODO: Need to show game over screen. right now only turns virus color to blue
+                this.torusColor = color(0, 0, 1, 1);
+                break;
             }
         }
-
         for (let i = 0; i < this.numAntibodies; i++) {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
             {
