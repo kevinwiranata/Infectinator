@@ -184,8 +184,10 @@ export class Virus extends Scene {
             torus: new defs.Torus(15, 15),
             torus2: new defs.Torus(3, 15),
             sphere: new defs.Subdivision_Sphere(4),
+            square: new defs.Square(),
             test: new defs.Square(),
             circle: new defs.Regular_2D_Polygon(65, 65),
+            cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
         };
@@ -212,7 +214,11 @@ export class Virus extends Scene {
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
             antibody: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")})
+                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")}),
+            cell: new Material(new defs.Textured_Phong(1), {
+                color: color(1, 0, 0, 1),
+                diffusivity: 1.0, specularity: 0.5, ambient: 0.1,
+                texture: new Texture("./assets/cell.png")})
         }
 
         this.center = Mat4.identity();
@@ -220,6 +226,9 @@ export class Virus extends Scene {
         this.removebullet = false;
         this.bulletPositions = [];
         this.virus = Mat4.identity();
+        this.start = false;
+        this.won = false;
+        this.gameOver = false;
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
         this.attached = () => this.initial_camera_location;
@@ -312,6 +321,7 @@ export class Virus extends Scene {
             }
         });
         this.key_triggered_button("Shoot", ["p"], this.firebullet)
+        this.key_triggered_button("Start", ['Enter'], () => this.start = true)
     }
 
     firebullet() {
@@ -355,73 +365,81 @@ export class Virus extends Scene {
         let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
 
-        // DRAW VIRUS CHARACTER
-        let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
-        this.virus = torus_transform;
-        this.shapes.covid.draw(context, program_state, torus_transform, this.materials.test.override({
-            color: this.torusColor}));
-
-
-        // CELLS
-        for (let i = 0; i < this.numCells; i++) {
-            if(this.infected[i] === false) {
-                // Move cells
-                this.moveCells(i);
-                this.cell_transform[i] = Mat4.identity()
-                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
-                    // .times(Mat4.scale(0.3, 0.3, 0.3))
-                this.shapes.sphere.draw(context, program_state, this.cell_transform[i], this.materials.test);
-            }
-            else {
-                this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
-            }
+        if(!this.start) {
+            let welcome_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
         }
+        else {
 
-        // PROTEIN BULELTS
-        for(let i = 0; i < this.bullets.length; i++) {
-            this.removebullet = false;
-            this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5 , 0));
+            // DRAW VIRUS CHARACTER
+            let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0))
+            this.virus = torus_transform;
+            this.shapes.covid.draw(context, program_state, torus_transform, this.materials.test.override({
+                color: this.torusColor
+            }));
 
-            // check if the bullet hits a cell
-            for(let j = 0; j < 10; j++) {
-                if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.3) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.3)) {
-                    if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.3) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.3)) {
-                        this.infected[j] = true;
-                        this.removebullet = true;
-                    }
+
+            // CELLS
+            for (let i = 0; i < this.numCells; i++) {
+                if (this.infected[i] === false) {
+                    // Move cells
+                    this.moveCells(i);
+                    this.cell_transform[i] = Mat4.identity()
+                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
+                        .times(Mat4.scale(0.5,0.5,0.5))
+                    // .times(Mat4.scale(0.3, 0.3, 0.3))
+                    this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
+                } else {
+                    this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
                 }
             }
-            let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
-            if(radius > 64) {
-                this.removebullet = true;
+
+            // PROTEIN BULELTS
+            for (let i = 0; i < this.bullets.length; i++) {
+                this.removebullet = false;
+                this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5, 0));
+
+                // check if the bullet hits a cell
+                for (let j = 0; j < 10; j++) {
+                    if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.4) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.4)) {
+                        if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.4) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.4)) {
+                            this.infected[j] = true;
+                            this.removebullet = true;
+                        }
+                    }
+                }
+                let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
+                if (radius > 64) {
+                    this.removebullet = true;
+                }
+
+                // if not out of bounds and doesn't hit a cell
+                if (this.removebullet === false) {
+                    this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
+                } else { // else we remove it from the array
+                    this.bulletPositions.splice(i, 1);
+                    this.bullets.splice(i, 1);
+                }
             }
 
-            // if not out of bounds and doesn't hit a cell
-            if(this.removebullet === false) {
-                this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
-            } else { // else we remove it from the array
-                this.bulletPositions.splice(i, 1);
-                this.bullets.splice(i, 1);
+            // ANTIBODIES
+            for (let i = 0; i < this.numAntibodies; i++) {
+                // move antibody
+                this.moveAntibody(i);
+
+                let currentAntibody = this.antibodies[i];
+                let xPos = currentAntibody.x;
+                let yPos = currentAntibody.y;
+
+                this.antibodies[i].model_transform = Mat4.identity()
+                    .times(Mat4.translation(xPos, yPos, 0))
+                    .times(Mat4.scale(0.5, 0.5, 0.5));
+
+                this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
             }
+
+            this.handleVirusCollision();
         }
-
-        // ANTIBODIES
-        for (let i = 0; i < this.numAntibodies; i++) {
-            // move antibody
-            this.moveAntibody(i);
-
-            let currentAntibody = this.antibodies[i];
-            let xPos = currentAntibody.x;
-            let yPos = currentAntibody.y;
-
-            this.antibodies[i].model_transform = Mat4.identity()
-                .times(Mat4.translation(xPos, yPos, 0))
-                .times(Mat4.scale(0.5, 0.5, 0.5));
-
-            this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
-        }
-
-        this.handleVirusCollision();
     }
 
     moveCells(cellIndex) {
