@@ -256,7 +256,7 @@ export class Virus extends Scene {
         this.start = false;
         this.won = false;
         this.gameOver = false;
-
+        this.timeElapsed = 0;
 
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
@@ -396,6 +396,7 @@ export class Virus extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 5000)];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        this.timeElapsed = t;
         let model_transform = Mat4.identity();
 
         // let microscope_transform = Mat4.identity();
@@ -408,6 +409,8 @@ export class Virus extends Scene {
         // let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50).times(Mat4.translation(0,0,0.05)));
         let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
+
+        this.won = this.isGameWon();
 
         if(!this.start) {
             this.play_music("minor_circuit");
@@ -422,7 +425,7 @@ export class Virus extends Scene {
         else if (this.won) {
             let won_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
             this.shapes.square.draw(context, program_state, won_transform, this.materials.test);
-        } 
+        }
 
         // GAME OVER
         else if (this.gameOver) {
@@ -434,7 +437,8 @@ export class Virus extends Scene {
         else {
             this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
-            let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0))
+            let torus_transform = model_transform
+                .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
             this.virus = torus_transform;
             this.shapes.covid.draw(context, program_state, torus_transform, this.materials.covid);
 
@@ -445,6 +449,7 @@ export class Virus extends Scene {
                     this.moveCells(i);
                     this.cell_transform[i] = Mat4.identity()
                         .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
+                        .times(Mat4.rotation(90, 1, 0, 0))
                         .times(Mat4.scale(0.5,0.5,0.5))
                     // .times(Mat4.scale(0.3, 0.3, 0.3))
                     this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
@@ -523,6 +528,10 @@ export class Virus extends Scene {
         }
     }
 
+    isGameWon() {
+        return this.infected.every(infect => infect === true);
+    }
+
     addZombie(x, y, context, program_state) {
         this.zombies.push(new Zombie(x, y));
         // console.log(this.zombies[(this.zombies.length)-1].x);
@@ -599,7 +608,8 @@ export class Virus extends Scene {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
             {
                 // TODO: Need to show game over screen. right now only turns virus color to blue
-                this.torusColor = color(0, 0, 1, 1);
+                if (this.timeElapsed > 3)
+                    this.gameOver = true;
                 break;
             }
         }
