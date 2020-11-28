@@ -146,7 +146,7 @@ class Antibody {
     }
 }
 
-class Zombie {
+class Food {
     constructor(x, y) {
         this.x = x;
         this.y = y;
@@ -168,9 +168,11 @@ export class Virus extends Scene {
         this.antibodies = [];
         this.numAntibodies = 5;
 
-        this.zombies = [];
+        this.foods = [];
+        this.ateTime = -6;
+        this.currTime = 0;
 
-        this.numCells = 10;
+        this.numCells = 2;
 
         this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
         this.cell_angle = Array(this.numCells).fill(0);
@@ -323,22 +325,38 @@ export class Virus extends Scene {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Up", ["w"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
-                this.torusLocation.y += 0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.y += 0.5
+                }
+                else
+                    this.torusLocation.y += 1.0
             }
         });
         this.key_triggered_button("Left", ["a"], () => {
             if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += -0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += -0.5
+                }
+                else
+                    this.torusLocation.x += -1.0
             }
         });
         this.key_triggered_button("Down", ["s"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
-                this.torusLocation.y += -0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.y += -0.5
+                }
+                else
+                    this.torusLocation.y += -1.0
             }
         });
         this.key_triggered_button("Right", ["d"], () => {
             if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += 0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += 0.5
+                }
+                else
+                    this.torusLocation.x += 1.0
             }
         });
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
@@ -475,18 +493,10 @@ export class Virus extends Scene {
                     // .times(Mat4.scale(0.3, 0.3, 0.3))
                     this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
                 }
-                if (this.infected[i] === true && this.eaten[i] === false) {
+                else if (this.infected[i] === true && this.eaten[i] === false) {
                     this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
-                    // this.zombies.push(new Zombie(this.xpositions[i], this.ypositions[i]));
                 }
             }
-
-            // for (let i = 0; i < this.zombies.length; i++) {
-            //     if (this.eaten[i] === false) {
-            //         this.zombie_transform = Mat4.identity().times(Mat4.translation(this.zombies[i].x, this.zombies[i].y, 1))
-            //         this.shapes.torus.draw(context, program_state, this.zombie_transform, this.materials.test);
-            //     }
-            // }
 
             // PROTEIN BULELTS
             for (let i = 0; i < this.bullets.length; i++) {
@@ -497,11 +507,6 @@ export class Virus extends Scene {
                 for (let j = 0; j < this.numCells; j++) {
                     if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
                         if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.5) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.5)) {
-                            // this.addZombie(this.xpositions[j], this.ypositions[j], context, program_state);
-                            //
-                            // this.xpositions.splice(j,1);
-                            // this.ypositions.splice(j,1);
-                            // this.numCells--;
                             this.infected[j] = true;
                             this.removebullet = true;
                         }
@@ -522,13 +527,6 @@ export class Virus extends Scene {
                 }
             }
 
-            // ZOMBIES
-            // for(let i = 0; i < this.zombies.length; i++) {
-            //     this.moveZombie(i);
-            //     this.zombie_transform = Mat4.identity().times(Mat4.translation(this.zombies[i].x, this.zombies[i].y, 1))
-            //     this.shapes.torus.draw(context, program_state, this.zombie_transform, this.materials.test);
-            // }
-
             // ANTIBODIES
             for (let i = 0; i < this.numAntibodies; i++) {
                 // move antibody
@@ -544,21 +542,13 @@ export class Virus extends Scene {
 
                 this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
             }
-
-            this.handleVirusCollision(context, program_state);
+            this.currTime = program_state.animation_time / 1000;
+            this.handleVirusCollision(program_state);
         }
     }
 
     isGameWon() {
         return this.infected.every(infect => infect === true);
-    }
-
-    addZombie(x, y, context, program_state) {
-        this.zombies.push(new Zombie(x, y));
-        // console.log(this.zombies[(this.zombies.length)-1].x);
-        this.zombie_transform = Mat4.identity()
-            .times(Mat4.translation(this.zombies[(this.zombies.length) - 1].x, this.zombies[(this.zombies.length) - 1].y, 0));
-        this.shapes.torus.draw(context, program_state, this.zombie_transform, this.materials.test);
     }
 
     moveCells(cellIndex) {
@@ -573,20 +563,6 @@ export class Virus extends Scene {
 
         this.xpositions[cellIndex] += moveLength*Math.cos(this.cell_angle[cellIndex]);
         this.ypositions[cellIndex] += moveLength*Math.sin(this.cell_angle[cellIndex]);
-    }
-
-    moveZombie(zombieIndex) {
-        const moveLength = 0.35;
-        let nextX = this.zombies[zombieIndex].x + moveLength*Math.cos(this.zombies[zombieIndex].angle);
-        let nextY = this.zombies[zombieIndex].y + moveLength*Math.sin(this.zombies[zombieIndex].angle);
-
-        // if collides with circumference of petri dish
-        if(this.calclulate_radius(nextX, nextY) >= 63) {
-            this.zombies[zombieIndex].angle = (this.zombies[zombieIndex].angle + 180);
-        }
-
-        this.zombies[zombieIndex].x += moveLength*Math.cos(this.zombies[zombieIndex].angle);
-        this.zombies[zombieIndex].y += moveLength*Math.sin(this.zombies[zombieIndex].angle);
     }
 
     moveAntibody(antibodyIndex) {
@@ -609,20 +585,13 @@ export class Virus extends Scene {
         return (Math.sqrt(xDiff**2 + yDiff**2));
     }
 
-    handleVirusCollision() {
+    handleVirusCollision(program_state) {
         for (let i = 0; i < this.xpositions.length; i++) {
-            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
-            {
-                this.eaten[i] = true;
-            }
-        }
-        // virus-antibody collision
-        for (let i = 0; i < this.zombies.length; i++) {
-            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.zombies[i].x, this.zombies[i].y) <= this.radiusOfTorus)
-            {
-                // TODO: Need to show game over screen. right now only turns virus color to blue
-                this.torusColor = color(0, 0, 1, 1);
-                break;
+            if(this.infected[i] === true && this.eaten[i] === false) {
+                if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus) {
+                    this.eaten[i] = true;
+                    this.ateTime = program_state.animation_time / 1000
+                }
             }
         }
         for (let i = 0; i < this.numAntibodies; i++) {
