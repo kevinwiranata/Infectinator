@@ -161,6 +161,7 @@ export class Virus extends Scene {
         this.torusLocation = {
             x: 0,
             y: 0,
+            angle: 0,
         }
         this.xpositions = [];
         this.ypositions = [];
@@ -341,6 +342,9 @@ export class Virus extends Scene {
                 this.torusLocation.x += 0.5
             }
         });
+
+        this.key_triggered_button("Rotate Left", ["g"], () => this.torusLocation.angle += 1)
+        this.key_triggered_button("Rotate Right", ["h"], () => this.torusLocation.angle -= 1)
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
 
     }
@@ -393,10 +397,24 @@ export class Virus extends Scene {
             this.mouse_enabled_canvases.add(context.canvas)
         }
 
+        let tx = this.virus[0][3], ty = this.virus[1][3], tz = this.virus[2][3];
+        // console.log("tx:");
+        // console.log(tx);
+        // console.log("tx edit:");
+        // console.log((-10* Math.sin(this.torusLocation.angle) + tx));
+
+
+        // formula for rotating around a point (virus):
+        // T(tx, ty)R(theta)T(-tx,-ty)P
+        // P is [this.virus[0][3], this.virus[1][3] - 6, this.virus[2][3] - 10 ] which was our default view to follow the virus
+        // I did the formula by hand and this is what u get: 
         this.camera_matrix = Mat4.look_at(
-        vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
-        vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
-        vec3(0, 1, 1));
+        vec3(
+            (10* Math.sin(this.torusLocation.angle) + tx), 
+            (-10* Math.cos(this.torusLocation.angle) + ty),  
+            tz + 6),
+        vec3(this.virus[0][3], this.virus[1][3], 0),
+        vec3(0, 0, 1));
 
         program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
         .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .035)));
@@ -460,7 +478,9 @@ export class Virus extends Scene {
         else {
             this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
-            this.virus= model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
+            this.virus= model_transform
+            .times(Mat4.rotation(this.torusLocation.angle, 0, 0, 1))
+            .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
             this.shapes.covid.draw(context, program_state, this.virus, this.materials.covid);
 
             // CELLS
