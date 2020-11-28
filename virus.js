@@ -160,7 +160,7 @@ export class Virus extends Scene {
 
         this.torusLocation = {
             x: 0,
-            y: 0
+            y: 0,
         }
         this.xpositions = [];
         this.ypositions = [];
@@ -258,10 +258,7 @@ export class Virus extends Scene {
         this.won = false;
         this.gameOver = false;
         this.timeElapsed = 0;
-
-
-        this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
-        this.attached = () => this.initial_camera_location;
+        this.mouse_enabled_canvases = new Set();
 
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
@@ -324,25 +321,14 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        // this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
-        // Mat4.look_at(
-        // vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
-        // vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
-        // vec3(0, 1, 1)));
-
-        this.key_triggered_button("Left", ["a"], () => {
-            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += -0.5
-            }
-        });
-        this.key_triggered_button("Right", ["d"], () => {
-            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += 0.5
-            }
-        });
         this.key_triggered_button("Up", ["w"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
                 this.torusLocation.y += 0.5
+            }
+        });
+        this.key_triggered_button("Left", ["a"], () => {
+            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
+                this.torusLocation.x += -0.5
             }
         });
         this.key_triggered_button("Down", ["s"], () => {
@@ -350,8 +336,24 @@ export class Virus extends Scene {
                 this.torusLocation.y += -0.5
             }
         });
-        this.key_triggered_button("Shoot", ["p"], this.firebullet)
+        this.key_triggered_button("Right", ["d"], () => {
+            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
+                this.torusLocation.x += 0.5
+            }
+        });
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
+
+    }
+
+    add_mouse_controls(canvas) {
+        // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
+        // First, measure mouse steering, for rotating the flyaround camera:
+        this.mouse = {"from_center": vec(0, 0)};
+
+        canvas.addEventListener("mousemove", e => {
+            e.preventDefault();
+        });
+        canvas.addEventListener("click", () => {this.firebullet()});
     }
 
     firebullet() {
@@ -384,6 +386,11 @@ export class Virus extends Scene {
         // CAMERA SETUP
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+        }
+
+        if (!this.mouse_enabled_canvases.has(context.canvas)) {
+            this.add_mouse_controls(context.canvas);
+            this.mouse_enabled_canvases.add(context.canvas)
         }
 
         this.camera_matrix = Mat4.look_at(
@@ -453,10 +460,8 @@ export class Virus extends Scene {
         else {
             this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
-            let torus_transform = model_transform
-                .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
-            this.virus = torus_transform;
-            this.shapes.covid.draw(context, program_state, torus_transform, this.materials.covid);
+            this.virus= model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
+            this.shapes.covid.draw(context, program_state, this.virus, this.materials.covid);
 
             // CELLS
             for (let i = 0; i < this.numCells; i++) {
