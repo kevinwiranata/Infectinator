@@ -250,6 +250,8 @@ export class Virus extends Scene {
             blaster: new Audio("assets/blaster.mp3"),
         }
 
+        this.score = 0;
+
         this.center = Mat4.identity();
         this.bullets = [];
         this.removebullet = false;
@@ -452,6 +454,7 @@ export class Virus extends Scene {
             .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
             .times(Mat4.translation(0, 0.84, 0.8))))
             this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);
+            this.score = 0;
         }
 
         // GAME WON
@@ -476,6 +479,8 @@ export class Virus extends Scene {
 
         // GAME IN PROGRESS
         else {
+            this.displayScore(this.score);
+
             this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
             this.virus= model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
@@ -507,6 +512,9 @@ export class Virus extends Scene {
                 for (let j = 0; j < this.numCells; j++) {
                     if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
                         if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.5) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.5)) {
+                            if (this.infected[j] != true)
+                                this.score++;
+
                             this.infected[j] = true;
                             this.removebullet = true;
                         }
@@ -545,6 +553,11 @@ export class Virus extends Scene {
             this.currTime = program_state.animation_time / 1000;
             this.handleVirusCollision(program_state);
         }
+    }
+
+    displayScore(score) {
+        let scoreElement = document.getElementById("score");
+        scoreElement.innerHTML = `<span>Score: ${score}</span>`;
     }
 
     isGameWon() {
