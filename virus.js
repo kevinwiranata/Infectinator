@@ -219,7 +219,7 @@ export class Virus extends Scene {
                 specularity: .5
             }),
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
-                color: color(0, 0, 0, 0.2),
+                color: color(0, 0, 0, 0.8),
                 ambient: 1,
                 texture: new Texture("./assets/chromosome.jpg")
             }),
@@ -245,6 +245,7 @@ export class Virus extends Scene {
         // sounds
         this.sounds = {
             minor_circuit: new Audio("assets/minor_circuit.mp3"),
+            blaster: new Audio("assets/blaster.mp3"),
         }
 
         this.center = Mat4.identity();
@@ -354,6 +355,11 @@ export class Virus extends Scene {
     }
 
     firebullet() {
+        this.sounds.blaster.pause();
+        this.sounds.blaster.currentTime = 0;
+        this.sounds.blaster.volume = 0.2;
+        this.sounds.blaster.play();
+
         this.bullets.push(this.materials.bullet);
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
@@ -362,7 +368,6 @@ export class Virus extends Scene {
     }
 
     play_music(title) {
-        console.log(title);
         this.sounds[title].volume = 0.2;
         this.sounds[title].loop = true;
         this.sounds[title].play();
@@ -379,14 +384,16 @@ export class Virus extends Scene {
         // CAMERA SETUP
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            //program_state.set_camera(Mat4.inverse(this.initial_camera_location));
         }
+
         this.camera_matrix = Mat4.look_at(
         vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1));
+
         program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
         .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .035)));
+
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
@@ -413,6 +420,7 @@ export class Virus extends Scene {
         this.won = this.isGameWon();
 
         if(!this.start) {
+            program_state.animation_time = 0;
             this.play_music("minor_circuit");
             let welcome_transform = model_transform
             .times(Mat4.scale(7, 7, 7)
@@ -423,13 +431,21 @@ export class Virus extends Scene {
 
         // GAME WON
         else if (this.won) {
-            let won_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
+            this.virus = Mat4.identity();
+            let won_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
             this.shapes.square.draw(context, program_state, won_transform, this.materials.test);
         }
 
         // GAME OVER
         else if (this.gameOver) {
-            let game_over_transform = model_transform.times(Mat4.scale(12, 20, 12).times(Mat4.rotation(Math.PI / 2.5, 1, 0, 0)));
+            this.virus = Mat4.identity();
+            let game_over_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
             this.shapes.square.draw(context, program_state, game_over_transform, this.materials.test);
         }
 
