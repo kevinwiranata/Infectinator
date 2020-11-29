@@ -146,6 +146,13 @@ class Antibody {
     }
 }
 
+class Food {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.floor(Math.random() * 360);
+    }
+}
 export class Virus extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -153,7 +160,7 @@ export class Virus extends Scene {
 
         this.torusLocation = {
             x: 0,
-            y: 0
+            y: 0,
         }
         this.xpositions = [];
         this.ypositions = [];
@@ -161,11 +168,17 @@ export class Virus extends Scene {
         this.antibodies = [];
         this.numAntibodies = 5;
 
-        this.numCells = 10;
+        this.foods = [];
+        this.ateTime = -6;
+        this.currTime = 0;
+
+        this.numCells = 2;
 
         this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
         this.cell_angle = Array(this.numCells).fill(0);
         this.infected = Array(this.numCells).fill(0).map(x => false);
+        this.eaten = Array(this.numCells).fill(0).map(x => false);
+
         // need to start from i = 1 so that in set_cell, we won't be accessing index -1
         for(let i = 1; i <= this.numCells; i++) {
             this.set_cell_xpositions(i-1);
@@ -184,10 +197,13 @@ export class Virus extends Scene {
             torus: new defs.Torus(15, 15),
             torus2: new defs.Torus(3, 15),
             sphere: new defs.Subdivision_Sphere(4),
+            square: new defs.Square(),
             test: new defs.Square(),
             circle: new defs.Regular_2D_Polygon(65, 65),
+            cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
+            // microscope: new Shape_From_File("assets/microscope.obj")
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
@@ -205,24 +221,48 @@ export class Virus extends Scene {
                 specularity: .5
             }),
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
-                color: color(0, 0, 0, 0.2),
+                color: color(0, 0, 0, 0.8),
                 ambient: 1,
                 texture: new Texture("./assets/chromosome.jpg")
+            }),
+            covid: new Material(new defs.Textured_Phong(1), {
+                diffusivity: 1.0, specularity: 1.0, ambient: 1.0,
+                texture: new Texture("./assets/corona.png")
             }),
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
             antibody: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")})
+                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")}),
+            cell: new Material(new defs.Textured_Phong(1), {
+                color: color(1, 0, 0, 1),
+                diffusivity: 1.0, specularity: 0.5, ambient: 0.1,
+                texture: new Texture("./assets/cell.png")}),
+            welcome: new Material(new defs.Textured_Phong(1), {
+                    color: color(0, 0, 0, 1),
+                    ambient: 1,
+                    texture: new Texture("./assets/welcome.png")
+                }),
+            },
+
+        // sounds
+        this.sounds = {
+            minor_circuit: new Audio("assets/minor_circuit.mp3"),
+            blaster: new Audio("assets/blaster.mp3"),
         }
+
+        this.score = 0;
 
         this.center = Mat4.identity();
         this.bullets = [];
         this.removebullet = false;
         this.bulletPositions = [];
+        this.bulletsOgY = [];
         this.virus = Mat4.identity();
-
-        this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
-        this.attached = () => this.initial_camera_location;
+        this.start = false;
+        this.won = false;
+        this.gameOver = false;
+        this.timeElapsed = 0;
+        this.mouse_enabled_canvases = new Set();
 
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
@@ -285,40 +325,78 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        // this.key_triggered_button("Follow View", ["q"], () => this.attached = () =>
-        // Mat4.look_at(
-        // vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
-        // vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
-        // vec3(0, 1, 1)));
-
-        this.key_triggered_button("Left", ["a"], () => {
-            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += -0.5
-            }
-        });
-        this.key_triggered_button("Right", ["d"], () => {
-            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
-                this.torusLocation.x += 0.5
-            }
-        });
         this.key_triggered_button("Up", ["w"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
-                this.torusLocation.y += 0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.y += 0.5
+                }
+                else
+                    this.torusLocation.y += 1.0
+            }
+        });
+        this.key_triggered_button("Left", ["a"], () => {
+            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += -0.5
+                }
+                else
+                    this.torusLocation.x += -1.0
             }
         });
         this.key_triggered_button("Down", ["s"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
-                this.torusLocation.y += -0.5
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.y += -0.5
+                }
+                else
+                    this.torusLocation.y += -1.0
             }
         });
-        this.key_triggered_button("Shoot", ["p"], this.firebullet)
+        this.key_triggered_button("Right", ["d"], () => {
+            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += 0.5
+                }
+                else
+                    this.torusLocation.x += 1.0
+            }
+        });
+        this.key_triggered_button("Start", ['Enter'], () => this.start = true)
+
+    }
+
+    add_mouse_controls(canvas) {
+        // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
+        // First, measure mouse steering, for rotating the flyaround camera:
+        this.mouse = {"from_center": vec(0, 0)};
+
+        canvas.addEventListener("mousemove", e => {
+            e.preventDefault();
+        });
+        canvas.addEventListener("click", () => {this.firebullet()});
     }
 
     firebullet() {
+        this.sounds.blaster.pause();
+        this.sounds.blaster.currentTime = 0;
+        this.sounds.blaster.volume = 0.2;
+        this.sounds.blaster.play();
+
         this.bullets.push(this.materials.bullet);
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
         .times(Mat4.scale(0.33, 0.33, 0.33))));
+        this.bulletsOgY[this.bullets.length-2] = this.torusLocation.y;
+    }
+
+    play_music(title) {
+        this.sounds[title].volume = 0.2;
+        this.sounds[title].loop = true;
+        this.sounds[title].play();
+    }
+
+    stop_music(title) {
+        this.sounds[title].pause();
     }
 
     display(context, program_state) {
@@ -328,24 +406,35 @@ export class Virus extends Scene {
         // CAMERA SETUP
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            //program_state.set_camera(Mat4.inverse(this.initial_camera_location));
         }
+
+        if (!this.mouse_enabled_canvases.has(context.canvas)) {
+            this.add_mouse_controls(context.canvas);
+            this.mouse_enabled_canvases.add(context.canvas)
+        }
+
         this.camera_matrix = Mat4.look_at(
         vec3(this.virus[0][3], this.virus[1][3] -10, this.virus[2][3] + 6),
         vec3(this.virus[0][3], this.virus[1][3], this.virus[2][3]),
         vec3(0, 1, 1));
+
         program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
         .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .035)));
+
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, .1, 1000);
 
          // LIGHTING SETUP
-        const light_position = vec4(0, 0, 5, 1);
+        const light_position = vec4(0, 0, 0, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 5000)];
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        this.timeElapsed = t;
         let model_transform = Mat4.identity();
+
+        // let microscope_transform = Mat4.identity();
+        // this.shapes.microscope.draw(context, program_state, microscope_transform, this.materials.test);
 
         // BACKGROUND SETUP
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
@@ -355,73 +444,124 @@ export class Virus extends Scene {
         let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
 
-        // DRAW VIRUS CHARACTER
-        let torus_transform = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0))
-        this.virus = torus_transform;
-        this.shapes.covid.draw(context, program_state, torus_transform, this.materials.test.override({
-            color: this.torusColor}));
+        this.won = this.isGameWon();
 
-
-        // CELLS
-        for (let i = 0; i < this.numCells; i++) {
-            if(this.infected[i] === false) {
-                // Move cells
-                this.moveCells(i);
-                this.cell_transform[i] = Mat4.identity()
-                    .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 1))
-                    // .times(Mat4.scale(0.3, 0.3, 0.3))
-                this.shapes.sphere.draw(context, program_state, this.cell_transform[i], this.materials.test);
-            }
-            else {
-                this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
-            }
+        if(!this.start) {
+            program_state.animation_time = 0;
+            this.play_music("minor_circuit");
+            let welcome_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);
+            this.score = 0;
         }
 
-        // PROTEIN BULELTS
-        for(let i = 0; i < this.bullets.length; i++) {
-            this.removebullet = false;
-            this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5 , 0));
+        // GAME WON
+        else if (this.won) {
+            this.virus = Mat4.identity();
+            let won_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
+            this.shapes.square.draw(context, program_state, won_transform, this.materials.test);
+        }
 
-            // check if the bullet hits a cell
-            for(let j = 0; j < 10; j++) {
-                if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.3) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.3)) {
-                    if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.3) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.3)) {
-                        this.infected[j] = true;
-                        this.removebullet = true;
-                    }
+        // GAME OVER
+        else if (this.gameOver) {
+            this.virus = Mat4.identity();
+            let game_over_transform = model_transform
+            .times(Mat4.scale(7, 7, 7)
+            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+            .times(Mat4.translation(0, 0.84, 0.8))))
+            this.shapes.square.draw(context, program_state, game_over_transform, this.materials.test);
+        }
+
+        // GAME IN PROGRESS
+        else {
+            this.displayScore(this.score);
+
+            this.stop_music("minor_circuit");
+            // DRAW VIRUS CHARACTER
+            this.virus= model_transform.times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
+            this.shapes.covid.draw(context, program_state, this.virus, this.materials.covid);
+
+            // CELLS
+            for (let i = 0; i < this.numCells; i++) {
+                if (this.infected[i] === false) {
+                    // Move cells
+                    this.moveCells(i);
+                    this.cell_transform[i] = Mat4.identity()
+                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], 0))
+                        .times(Mat4.rotation(90, 1, 0, 0))
+                        .times(Mat4.scale(0.5,0.5,0.5))
+                    // .times(Mat4.scale(0.3, 0.3, 0.3))
+                    this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
+                }
+                else if (this.infected[i] === true && this.eaten[i] === false) {
+                    this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
                 }
             }
-            let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
-            if(radius > 64) {
-                this.removebullet = true;
+
+            // PROTEIN BULELTS
+            for (let i = 0; i < this.bullets.length; i++) {
+                this.removebullet = false;
+                this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5, 0));
+
+                // check if the bullet hits a cell
+                for (let j = 0; j < this.numCells; j++) {
+                    if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
+                        if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.5) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.5)) {
+                            if (this.infected[j] != true)
+                                this.score++;
+
+                            this.infected[j] = true;
+                            this.removebullet = true;
+                        }
+                    }
+                }
+                let radius = Math.sqrt(Math.pow(this.bulletPositions[i][0][3], 2) + Math.pow(this.bulletPositions[i][1][3], 2));
+                if (radius > 64) {
+                    this.removebullet = true;
+                }
+
+                // if not out of bounds and doesn't hit a cell
+                if (this.removebullet === false) {
+                    this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
+                } else { // else we remove it from the array
+                    this.bulletPositions.splice(i, 1);
+                    this.bullets.splice(i, 1);
+                    this.bulletsOgY.splice(i, 1);
+                }
             }
 
-            // if not out of bounds and doesn't hit a cell
-            if(this.removebullet === false) {
-                this.shapes.bullet.draw(context, program_state, this.bulletPositions[i], this.bullets[i]);
-            } else { // else we remove it from the array
-                this.bulletPositions.splice(i, 1);
-                this.bullets.splice(i, 1);
+            // ANTIBODIES
+            for (let i = 0; i < this.numAntibodies; i++) {
+                // move antibody
+                this.moveAntibody(i);
+
+                let currentAntibody = this.antibodies[i];
+                let xPos = currentAntibody.x;
+                let yPos = currentAntibody.y;
+
+                this.antibodies[i].model_transform = Mat4.identity()
+                    .times(Mat4.translation(xPos, yPos, 0))
+                    .times(Mat4.scale(0.5, 0.5, 0.5));
+
+                this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
             }
+            this.currTime = program_state.animation_time / 1000;
+            this.handleVirusCollision(program_state);
         }
+    }
 
-        // ANTIBODIES
-        for (let i = 0; i < this.numAntibodies; i++) {
-            // move antibody
-            this.moveAntibody(i);
+    displayScore(score) {
+        let scoreElement = document.getElementById("score");
+        scoreElement.innerHTML = `<span>Score: ${score}</span>`;
+    }
 
-            let currentAntibody = this.antibodies[i];
-            let xPos = currentAntibody.x;
-            let yPos = currentAntibody.y;
-
-            this.antibodies[i].model_transform = Mat4.identity()
-                .times(Mat4.translation(xPos, yPos, 0))
-                .times(Mat4.scale(0.5, 0.5, 0.5));
-
-            this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
-        }
-
-        this.handleVirusCollision();
+    isGameWon() {
+        return this.infected.every(infect => infect === true);
     }
 
     moveCells(cellIndex) {
@@ -458,19 +598,21 @@ export class Virus extends Scene {
         return (Math.sqrt(xDiff**2 + yDiff**2));
     }
 
-    handleVirusCollision() {
+    handleVirusCollision(program_state) {
         for (let i = 0; i < this.xpositions.length; i++) {
-            if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus)
-            {
-                this.infected[i] = true;
+            if(this.infected[i] === true && this.eaten[i] === false) {
+                if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus) {
+                    this.eaten[i] = true;
+                    this.ateTime = program_state.animation_time / 1000
+                }
             }
         }
-
         for (let i = 0; i < this.numAntibodies; i++) {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
             {
                 // TODO: Need to show game over screen. right now only turns virus color to blue
-                this.torusColor = color(0, 0, 1, 1);
+                if (this.timeElapsed > 3)
+                    this.gameOver = true;
                 break;
             }
         }
