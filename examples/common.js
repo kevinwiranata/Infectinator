@@ -847,20 +847,20 @@ const Movement_Controls = defs.Movement_Controls =
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                 vec(e.clientX - (rect.left + rect.right) / 2, e.clientY - (rect.bottom + rect.top) / 2);
             // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas:
-            document.addEventListener("mouseup", e => {
-                this.mouse.anchor = undefined;
-            });
-            canvas.addEventListener("mousedown", e => {
-                e.preventDefault();
-                this.mouse.anchor = mouse_position(e);
-            });
-            canvas.addEventListener("mousemove", e => {
-                e.preventDefault();
-                this.mouse.from_center = mouse_position(e);
-            });
-            canvas.addEventListener("mouseout", e => {
-                if (!this.mouse.anchor) this.mouse.from_center.scale_by(0)
-            });
+            // document.addEventListener("mouseup", e => {
+            //     this.mouse.anchor = undefined;
+            // });
+            // canvas.addEventListener("mousedown", e => {
+            //     e.preventDefault();
+            //     this.mouse.anchor = mouse_position(e);
+            // });
+            // canvas.addEventListener("mousemove", e => {
+            //     e.preventDefault();
+            //     this.mouse.from_center = mouse_position(e);
+            // });
+            // canvas.addEventListener("mouseout", e => {
+            //     if (!this.mouse.anchor) this.mouse.from_center.scale_by(0)
+            // });
         }
 
         show_explanation(document_element) {

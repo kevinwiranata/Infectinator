@@ -258,6 +258,7 @@ export class Virus extends Scene {
         this.removebullet = false;
         this.bulletPositions = [];
         this.bulletsOgY = [];
+        this.bulletDirections = []; // angle in radians
         this.virus = Mat4.identity();
         this.start = false;
         this.won = false;
@@ -267,6 +268,11 @@ export class Virus extends Scene {
 
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
+        this.camera_matrix = Mat4.look_at(
+            vec3(0, -10, 6),
+            vec3(0, 0, 0),
+            vec3(0, 0, 1)
+        );
     }
 
     // ALREADY FIXED THE PROBLEM OF CAN ONLY CHECK DIST < 0.1
@@ -329,53 +335,101 @@ export class Virus extends Scene {
         this.key_triggered_button("Up", ["w"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.y += 0.5
+                    this.torusLocation.x += -0.5*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += 0.5*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(0.5*Math.sin(this.torusLocation.angle), -0.5*Math.cos(this.torusLocation.angle),0));
                 }
-                else
-                    this.torusLocation.y += 1.0
+                else {
+                    this.torusLocation.x += -0.75*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += 0.75*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(0.75*Math.sin(this.torusLocation.angle), -0.75*Math.cos(this.torusLocation.angle),0));
+                }
             }
         });
         this.key_triggered_button("Left", ["a"], () => {
             if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += -0.5
+                    this.torusLocation.x += -0.5*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -0.5*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(0.5*Math.cos(this.torusLocation.angle), 0.5*Math.sin(this.torusLocation.angle),0));
                 }
-                else
-                    this.torusLocation.x += -1.0
+                else {
+                    this.torusLocation.x += -0.75*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -0.75*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(0.75*Math.cos(this.torusLocation.angle), 0.75*Math.sin(this.torusLocation.angle),0));
+                }
             }
         });
         this.key_triggered_button("Down", ["s"], () => {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.y += -0.5
+                    this.torusLocation.x += 0.5*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -0.5*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-0.5*Math.sin(this.torusLocation.angle), +0.5*Math.cos(this.torusLocation.angle),0));
                 }
-                else
-                    this.torusLocation.y += -1.0
+                else {
+                    this.torusLocation.x += 0.75*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -0.75*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-0.75*Math.sin(this.torusLocation.angle), +0.75*Math.cos(this.torusLocation.angle),0));
+                }
             }
         });
         this.key_triggered_button("Right", ["d"], () => {
             if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += 0.5
+                    this.torusLocation.x += 0.5*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += 0.5*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-0.5*Math.cos(this.torusLocation.angle), -0.5*Math.sin(this.torusLocation.angle),0));
                 }
-                else
-                    this.torusLocation.x += 1.0
+                else {
+                    this.torusLocation.x += 0.75*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -0.75*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-0.75*Math.sin(this.torusLocation.angle), +0.5*Math.cos(this.torusLocation.angle),0));
+                }
             }
         });
-
-        this.key_triggered_button("Rotate Left", ["g"], () => this.torusLocation.angle += 1)
-        this.key_triggered_button("Rotate Right", ["h"], () => this.torusLocation.angle -= 1)
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
+        this.key_triggered_button("Rotate Left", ["b"], () => {
+            this.torusLocation.angle += 0.1;
+            this.camera_matrix =  this.camera_matrix
+            .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y + 6, 0))
+            .times(Mat4.rotation(-0.1, 0, 0, 1))
+            .times(Mat4.translation(-this.torusLocation.x, -this.torusLocation.y -6, 0))
+        });
+        this.key_triggered_button("Rotate Right", ["m"], () =>  {
+            this.torusLocation.angle -= 0.1;
+            this.camera_matrix =  this.camera_matrix
+            .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y + 6, 0))
+            .times(Mat4.rotation(0.1, 0, 0, 1))
+            .times(Mat4.translation(-this.torusLocation.x, -this.torusLocation.y -6, 0))
+        });
+        this.key_triggered_button("Shoot", ["h"], () => this.firebullet())
 
     }
 
     add_mouse_controls(canvas) {
         // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
         // First, measure mouse steering, for rotating the flyaround camera:
-        this.mouse = {"from_center": vec(0, 0)};
+        const mouse_position = (e, rect = canvas.getBoundingClientRect()) => vec(e.clientX - (rect.right + rect.left) / 2);
 
         canvas.addEventListener("mousemove", e => {
             e.preventDefault();
+           if(this.start) {
+            let mouseRotation = mouse_position(e)*0.00009;
+            this.camera_matrix =  this.camera_matrix
+            .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y + 6, 0))
+            .times(Mat4.rotation(mouseRotation, 0, 0, 1))
+            .times(Mat4.translation(-this.torusLocation.x, -this.torusLocation.y -6, 0))
+            this.torusLocation.angle -= mouseRotation;
+           }
         });
         canvas.addEventListener("click", () => {this.firebullet()});
     }
@@ -387,6 +441,7 @@ export class Virus extends Scene {
         this.sounds.blaster.play();
 
         this.bullets.push(this.materials.bullet);
+        this.bulletDirections.push(this.torusLocation.angle);
         this.bulletPositions.push(Mat4.identity()
         .times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,0)
         .times(Mat4.scale(0.33, 0.33, 0.33))));
@@ -416,25 +471,6 @@ export class Virus extends Scene {
             this.add_mouse_controls(context.canvas);
             this.mouse_enabled_canvases.add(context.canvas)
         }
-
-        let tx = this.virus[0][3], ty = this.virus[1][3], tz = this.virus[2][3];
-        // console.log("tx:");
-        // console.log(tx);
-        // console.log("tx edit:");
-        // console.log((-10* Math.sin(this.torusLocation.angle) + tx));
-
-
-        // formula for rotating around a point (virus):
-        // T(tx, ty)R(theta)T(-tx,-ty)P
-        // P is [this.virus[0][3], this.virus[1][3] - 6, this.virus[2][3] - 10 ] which was our default view to follow the virus
-        // I did the formula by hand and this is what u get: 
-        this.camera_matrix = Mat4.look_at(
-        vec3(
-            (10* Math.sin(this.torusLocation.angle) + tx), 
-            (-10* Math.cos(this.torusLocation.angle) + ty),  
-            tz + 6),
-        vec3(this.virus[0][3], this.virus[1][3], 0),
-        vec3(0, 0, 1));
 
         program_state.set_camera(Mat4.translation(0, -6, 10).times(Mat4.inverse(this.camera_matrix))
         .map((x, i) => Vector.from(program_state.camera_transform[i]).mix(x, .035)));
@@ -477,7 +513,11 @@ export class Virus extends Scene {
 
         // GAME WON
         else if (this.won) {
-            this.virus = Mat4.identity();
+            this.camera_matrix = Mat4.look_at(
+                vec3(0, -12, 6),
+                vec3(0, 0, 0),
+                vec3(0, 0, 1)
+            );
             let won_transform = model_transform
             .times(Mat4.scale(7, 7, 7)
             .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
@@ -487,7 +527,11 @@ export class Virus extends Scene {
 
         // GAME OVER
         else if (this.gameOver) {
-            this.virus = Mat4.identity();
+            this.camera_matrix = Mat4.look_at(
+                vec3(0, -10, 6),
+                vec3(0, 0, 0),
+                vec3(0, 0, 1)
+            );
             let game_over_transform = model_transform
             .times(Mat4.scale(7, 7, 7)
             .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
@@ -502,8 +546,8 @@ export class Virus extends Scene {
             this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
             this.virus= model_transform
-            .times(Mat4.rotation(this.torusLocation.angle, 0, 0, 1))
             .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
+            .times(Mat4.rotation(this.torusLocation.angle, 0, 0, 1))
             this.shapes.covid.draw(context, program_state, this.virus, this.materials.covid);
 
             // CELLS
@@ -526,7 +570,9 @@ export class Virus extends Scene {
             // PROTEIN BULELTS
             for (let i = 0; i < this.bullets.length; i++) {
                 this.removebullet = false;
-                this.bulletPositions[i] = this.bulletPositions[i].times(Mat4.translation(0, 1.5, 0));
+                let r = 1.5;
+                this.bulletPositions[i] = this.bulletPositions[i]
+                .times(Mat4.translation(-r*Math.sin(this.bulletDirections[i]), r*Math.cos(this.bulletDirections[i]), 0));
 
                 // check if the bullet hits a cell
                 for (let j = 0; j < this.numCells; j++) {
@@ -552,6 +598,7 @@ export class Virus extends Scene {
                     this.bulletPositions.splice(i, 1);
                     this.bullets.splice(i, 1);
                     this.bulletsOgY.splice(i, 1);
+                    this.bulletDirections.splice(i, 1);
                 }
             }
 
