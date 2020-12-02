@@ -307,6 +307,21 @@ export class Virus extends Scene {
                     ambient: 1,
                     texture: new Texture("./assets/welcome.png")
                 }),
+            end_screen_time: new Material(new defs.Textured_Phong(1), {
+                color: color(0, 0, 0, 1),
+                ambient: 1,
+                texture: new Texture("./assets/End_Screen_Time.png")
+            }),
+            end_screen_antibody: new Material(new defs.Textured_Phong(1), {
+                color: color(0, 0, 0, 1),
+                ambient: 1,
+                texture: new Texture("./assets/End_Screen_Antibody.png")
+            }),
+            end_screen_win: new Material(new defs.Textured_Phong(1), {
+                color: color(0, 0, 0, 1),
+                ambient: 1,
+                texture: new Texture("./assets/End_Screen_Win.png")
+            }),
             text_image: new Material(new defs.Textured_Phong(1), {
                     ambient: 1, diffusivity: 0, specularity: 0,
                     texture: new Texture("assets/text.png")
@@ -316,11 +331,12 @@ export class Virus extends Scene {
         // sounds
         this.sounds = {
             minor_circuit: new Audio("assets/minor_circuit.mp3"),
+            guile_theme: new Audio("assets/guile_theme.mp3"),
             blaster: new Audio("assets/blaster.mp3"),
         }
 
         this.score = 0;
-        this.timer = 10;
+        this.timer = 180;
 
         this.center = Mat4.identity();
         this.bullets = [];
@@ -333,6 +349,7 @@ export class Virus extends Scene {
         this.won = false;
         this.gameOver = false;
         this.timeElapsed = 0;
+        this.timeLost = 0;
         this.mouse_enabled_canvases = new Set();
 
         this.torusColor = color(1,1,1,1);
@@ -567,7 +584,7 @@ export class Virus extends Scene {
         let wall_transform = Mat4.identity().times(Mat4.scale(58.8, 58.8, 50));
         this.shapes.petri_dish.draw(context, program_state, wall_transform, this.materials.wall);
 
-        this.won = this.isGameWon();
+        this.won = this.isGameWon(t);
 
         let welcome_transform = model_transform
         .times(Mat4.scale(7, 7, 7)
@@ -575,8 +592,12 @@ export class Virus extends Scene {
         .times(Mat4.translation(0, 0.84, 0.8))))
 
         let score_transform = welcome_transform
-        .times(Mat4.scale(0.1, 0.1, 0.1))
-        .times(Mat4.translation(10.8, 8, 0));
+        .times(Mat4.scale(0.06, 0.06, 0.06))
+        .times(Mat4.translation(17.4, 4.3, 0));
+
+        let time_transform = welcome_transform
+        .times(Mat4.scale(0.06, 0.06, 0.06))
+        .times(Mat4.translation(17.4, 2.1, 0));
 
         if(!this.start) {
             program_state.animation_time = 0;
@@ -593,10 +614,14 @@ export class Virus extends Scene {
                 vec3(0, 0, 0),
                 vec3(0, 0, 1)
             );
-            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
-            let strings = this.score.toString();
-            this.shapes.text.set_string(strings, context.context);
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_win);
+            let time = Math.floor((this.timeLost/ 60).toString()) + ":" + ((this.timeLost)%60).toFixed(0).toString();
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_time);
+            this.shapes.text.set_string(this.score.toString(), context.context);
             this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+
+            this.shapes.text.set_string(time, context.context);
+            this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
         }
 
         // GAME OVER
@@ -607,10 +632,25 @@ export class Virus extends Scene {
                 vec3(0, 0, 0),
                 vec3(0, 0, 1)
             );
-            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
-            let strings = this.score.toString();
-            this.shapes.text.set_string(strings, context.context);
-            this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+            let time = Math.floor((this.timeLost/ 60).toString()) + ":" + ((this.timeLost)%60).toFixed(0).toString();
+
+            // ran out of time
+            if(this.timer - t <= 0.0) { 
+                this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_time);
+                this.shapes.text.set_string(this.score.toString(), context.context);
+                this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+
+                this.shapes.text.set_string("0:0", context.context);
+                this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
+            } 
+            else {   // hit by antibody
+                this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_antibody);
+                this.shapes.text.set_string(this.score.toString(), context.context);
+                this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+    
+                this.shapes.text.set_string(time, context.context);
+                this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
+            }
 
 
         }
@@ -620,9 +660,10 @@ export class Virus extends Scene {
             this.displayScore(this.score);
             this.displayTime(Math.floor((this.timer - t)/ 60), ((this.timer - t)%60).toFixed(2));
             this.stop_music("minor_circuit");
+            this.play_music("guile_theme");
 
             // CHECK FOR TIMER
-            if((this.timer - t) <= 0.00) {
+            if((this.timer - t) <= 0.01) {
                 this.gameOver = true;
             }
 
@@ -720,7 +761,7 @@ export class Virus extends Scene {
                 this.shapes.sphere.draw(context, program_state, antibodies_reflection, this.materials.antibody_shadow);
             }
             this.currTime = program_state.animation_time / 1000;
-            this.handleVirusCollision(program_state);
+            this.handleVirusCollision(program_state, t);
         }
     }
 
@@ -734,8 +775,11 @@ export class Virus extends Scene {
         timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`; 
     }
 
-    isGameWon() {
-        return this.infected.every(infect => infect === true);
+    isGameWon(t) {
+        if(this.infected.every(infect => infect === true)) {
+            this.timeLost = this.timer - t;
+            return true;
+        }
     }
 
     moveCells(cellIndex) {
@@ -772,7 +816,7 @@ export class Virus extends Scene {
         return (Math.sqrt(xDiff**2 + yDiff**2));
     }
 
-    handleVirusCollision(program_state) {
+    handleVirusCollision(program_state, t) {
         for (let i = 0; i < this.xpositions.length; i++) {
             if(this.infected[i] === true && this.eaten[i] === false) {
                 if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.xpositions[i], this.ypositions[i]) <= this.radiusOfTorus) {
@@ -787,6 +831,7 @@ export class Virus extends Scene {
                 // TODO: Need to show game over screen. right now only turns virus color to blue
                 if (this.timeElapsed > 3)
                     this.gameOver = true;
+                    this.timeLost = this.timer - t;
                 break;
             }
         }
