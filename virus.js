@@ -351,6 +351,7 @@ export class Virus extends Scene {
         this.timeElapsed = 0;
         this.timeLost = 0;
         this.mouse_enabled_canvases = new Set();
+        this.cells_left = this.numCells;
 
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
@@ -609,6 +610,7 @@ export class Virus extends Scene {
         // GAME WON
         else if (this.won) {
             this.displayScore(this.score);
+            this.displayCellsLeft(this.cells_left);
             this.camera_matrix = Mat4.look_at(
                 vec3(0, -10, 6),
                 vec3(0, 0, 0),
@@ -659,6 +661,7 @@ export class Virus extends Scene {
         else {
             this.displayScore(this.score);
             this.displayTime(Math.floor((this.timer - t)/ 60), ((this.timer - t)%60).toFixed(2));
+            this.displayCellsLeft(this.cells_left);
             this.stop_music("minor_circuit");
             this.play_music("guile_theme");
 
@@ -720,6 +723,7 @@ export class Virus extends Scene {
 
                             this.infected[j] = true;
                             this.removebullet = true;
+                            this.cells_left--;
                         }
                     }
                 }
@@ -773,6 +777,12 @@ export class Virus extends Scene {
     displayTime(minutes, seconds) {
         let timerElement = document.getElementById("timer");
         timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`; 
+    }
+
+    displayCellsLeft(cells) {
+        console.log(cells);
+        let cellsElement = document.getElementById("cells");
+        cellsElement.innerHTML = `<span>Cells left: ${cells}</span>`; 
     }
 
     isGameWon(t) {
