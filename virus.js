@@ -282,7 +282,7 @@ export class Virus extends Scene {
         this.jump = false;
 
         this.friction = 0.01;
-        this.accel = 0.1;
+        this.accel = 0.05;
         this.moveDir = [0, 0, 0, 0];
         this.cartVel = [0, 0, 0, 0];
 
