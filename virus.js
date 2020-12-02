@@ -705,7 +705,7 @@ export class Virus extends Scene {
                 this.startJump = this.currTime;
             }
 			let diffTime = (this.currTime - this.startJump);
-			let jump =  Math.sin(45)*2 * diffTime - 1 / 2 * 9.8 * diffTime * diffTime;
+			let jump =  Math.sin(45)*2.5 * diffTime - 1 / 2 * 9.8 * diffTime * diffTime;
 			this.torusLocation.z += jump;
 			this.torusLocation.actualZ += jump;
 			if(this.torusLocation.actualZ < 0) {
