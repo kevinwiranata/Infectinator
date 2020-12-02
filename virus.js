@@ -271,6 +271,11 @@ export class Virus extends Scene {
         this.timeElapsed = 0;
         this.mouse_enabled_canvases = new Set();
 
+        this.moveUp = false;
+        this.moveLeft = false;
+        this.moveRight = false;
+        this.moveDown = false;
+
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
         this.camera_matrix = Mat4.look_at(
@@ -337,70 +342,11 @@ export class Virus extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Up", ["w"], () => {
-            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
-                if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += -0.5*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += 0.5*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(0.5*Math.sin(this.torusLocation.angle), -0.5*Math.cos(this.torusLocation.angle),0));
-                }
-                else {
-                    this.torusLocation.x += -0.75*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += 0.75*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(0.75*Math.sin(this.torusLocation.angle), -0.75*Math.cos(this.torusLocation.angle),0));
-                }
-            }
-        });
-        this.key_triggered_button("Left", ["a"], () => {
-            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
-                if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += -0.5*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -0.5*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(0.5*Math.cos(this.torusLocation.angle), 0.5*Math.sin(this.torusLocation.angle),0));
-                }
-                else {
-                    this.torusLocation.x += -0.75*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -0.75*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(0.75*Math.cos(this.torusLocation.angle), 0.75*Math.sin(this.torusLocation.angle),0));
-                }
-            }
-        });
-        this.key_triggered_button("Down", ["s"], () => {
-            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
-                if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += 0.5*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -0.5*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-0.5*Math.sin(this.torusLocation.angle), +0.5*Math.cos(this.torusLocation.angle),0));
-                }
-                else {
-                    this.torusLocation.x += 0.75*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -0.75*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-0.75*Math.sin(this.torusLocation.angle), +0.75*Math.cos(this.torusLocation.angle),0));
-                }
-            }
-        });
-        this.key_triggered_button("Right", ["d"], () => {
-            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
-                if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += 0.5*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += 0.5*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-0.5*Math.cos(this.torusLocation.angle), -0.5*Math.sin(this.torusLocation.angle),0));
-                }
-                else {
-                    this.torusLocation.x += 0.75*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -0.75*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-0.75*Math.sin(this.torusLocation.angle), +0.5*Math.cos(this.torusLocation.angle),0));
-                }
-            }
-        });
+        this.key_triggered_button("Up", ["w"], () => {this.moveUp = true}, undefined, () => {this.moveUp = false});
+        this.key_triggered_button("Left", ["a"], () => {this.moveLeft = true}, undefined, () => {this.moveLeft = false});
+        this.key_triggered_button("Down", ["s"], () => {this.moveDown = true}, undefined, () => {this.moveDown = false});
+        this.key_triggered_button("Right", ["d"], () => {this.moveRight = true}, undefined, () => {this.moveRight = false});
+
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
         this.key_triggered_button("Rotate Left", ["b"], () => {
             this.torusLocation.angle += 0.1;
@@ -557,6 +503,8 @@ export class Virus extends Scene {
             let torus_reflection = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y, -0.5)).times(Mat4.scale(1.1, 1.1, 0.1))
             this.shapes.covid.draw(context, program_state, torus_reflection, this.materials.test_shadow);
 
+            this.moveVirus();
+
             // CELLS
             for (let i = 0; i < this.numCells; i++) {
                 if (this.infected[i] === false) {
@@ -644,6 +592,78 @@ export class Virus extends Scene {
             }
             this.currTime = program_state.animation_time / 1000;
             this.handleVirusCollision(program_state);
+        }
+    }
+
+    moveVirus() {
+        const normalSpeed = 0.2
+        const eatSpeed = 0.4;
+        if (this.moveUp) {
+            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += -normalSpeed*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += normalSpeed*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(normalSpeed*Math.sin(this.torusLocation.angle), -normalSpeed*Math.cos(this.torusLocation.angle),0));
+                }
+                else {
+                    this.torusLocation.x += -eatSpeed*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += eatSpeed*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(eatSpeed*Math.sin(this.torusLocation.angle), -eatSpeed*Math.cos(this.torusLocation.angle),0));
+                }
+            }
+        }
+
+        if (this.moveLeft) {
+            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += -normalSpeed*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -normalSpeed*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(normalSpeed*Math.cos(this.torusLocation.angle), normalSpeed*Math.sin(this.torusLocation.angle),0));
+                }
+                else {
+                    this.torusLocation.x += -eatSpeed*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -eatSpeed*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(eatSpeed*Math.cos(this.torusLocation.angle), eatSpeed*Math.sin(this.torusLocation.angle),0));
+                }
+            }
+        }
+
+        if (this.moveDown) {
+            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += normalSpeed*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -normalSpeed*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-normalSpeed*Math.sin(this.torusLocation.angle), +normalSpeed*Math.cos(this.torusLocation.angle),0));
+                }
+                else {
+                    this.torusLocation.x += eatSpeed*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -eatSpeed*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-eatSpeed*Math.sin(this.torusLocation.angle), +eatSpeed*Math.cos(this.torusLocation.angle),0));
+                }
+            }
+        }
+
+        if (this.moveRight) {
+            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
+                if(this.currTime - this.ateTime > 5) {
+                    this.torusLocation.x += normalSpeed*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += normalSpeed*Math.sin(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-normalSpeed*Math.cos(this.torusLocation.angle), -normalSpeed*Math.sin(this.torusLocation.angle),0));
+                }
+                else {
+                    this.torusLocation.x += eatSpeed*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -eatSpeed*Math.cos(this.torusLocation.angle);
+                    this.camera_matrix = this.camera_matrix
+                    .times(Mat4.translation(-eatSpeed*Math.sin(this.torusLocation.angle), +eatSpeed*Math.cos(this.torusLocation.angle),0));
+                }
+            }
         }
     }
 
@@ -931,13 +951,13 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
         uniform float ambient, diffusivity, specularity, smoothness, animation_time, attenuation_factor;
         uniform bool GOURAUD, COLOR_NORMALS, USE_TEXTURE;               // Flags for alternate shading methods
         uniform vec4 lightPosition, lightColor, shapeColor;
-        varying vec3 N, E;                    // Specifier "varying" means a variable's final value will be passed from the vertex shader 
-        varying vec2 f_tex_coord;             // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
+        varying vec3 N, E;                    // Specifier "varying" means a variable's final value will be passed from the vertex shader
+        varying vec2 f_tex_coord;             // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
         varying vec4 VERTEX_COLOR;            // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         varying vec3 L, H;
         varying float dist;
         varying vec4 positionFromLight;
-        
+
         vec3 phong_model_lights( vec3 N, bool shadowed )
           { vec3 result = vec3(0.0);
 
@@ -948,7 +968,7 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
                 float specular = pow( max( dot(N, H), 0.0 ), smoothness );
 
                 result += s * attenuation_multiplier * ( shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular );
-              
+
             return result;
           }
         `;
@@ -967,13 +987,13 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
         { gl_Position = projection_camera_model_transform * vec4(object_space_pos, 1.0);     // The vertex's final resting place (in NDCS).
           N = normalize( inverse_transpose_modelview * normal );                             // The final normal vector in screen space.
           f_tex_coord = tex_coord;                                         // Directly use original texture coords and interpolate between.
-            
+
           vec4 world_position = (model_transform * vec4(object_space_pos, 1.0));
           positionFromLight = projection_transform * light_transform * world_position;
 
 
           if( COLOR_NORMALS )                                     // Bypass all lighting code if we're lighting up vertices some other way.
-          { VERTEX_COLOR = vec4( N[0] > 0.0 ? N[0] : sin( animation_time * 3.0   ) * -N[0],             // In "normals" mode, 
+          { VERTEX_COLOR = vec4( N[0] > 0.0 ? N[0] : sin( animation_time * 3.0   ) * -N[0],             // In "normals" mode,
                                  N[1] > 0.0 ? N[1] : sin( animation_time * 15.0  ) * -N[1],             // rgb color = xyz quantity.
                                  N[2] > 0.0 ? N[2] : sin( animation_time * 45.0  ) * -N[2] , 1.0 );     // Flash if it's negative.
             return;
@@ -986,14 +1006,14 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
          // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
             L = normalize( ( camera_transform * lightPosition ).xyz - lightPosition.w * screen_space_pos );
             H = normalize( L + E );
-            
+
             // Is it a point light source?  Calculate the distance to it from the object.  Otherwise use some arbitrary distance.
             dist  = lightPosition.w > 0.0 ? distance((camera_transform * lightPosition).xyz, screen_space_pos)
                                                : distance( attenuation_factor * -lightPosition.xyz, object_space_pos.xyz );
-          
 
-          if( GOURAUD )                   // Gouraud shading mode?  If so, finalize the whole color calculation here in the vertex shader, 
-          {                               // one per vertex, before we even break it down to pixels in the fragment shader.   As opposed 
+
+          if( GOURAUD )                   // Gouraud shading mode?  If so, finalize the whole color calculation here in the vertex shader,
+          {                               // one per vertex, before we even break it down to pixels in the fragment shader.   As opposed
                                           // to Smooth "Phong" Shading, where we *do* wait to calculate final color until the next shader.
             VERTEX_COLOR      = vec4( shapeColor.xyz * ambient, shapeColor.w);
             VERTEX_COLOR.xyz += phong_model_lights( N, false );
@@ -1007,23 +1027,23 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
             return this.shared_glsl_code() +  `
             uniform sampler2D shadowmap;
         uniform sampler2D texture;
-        
+
         void main()
-        { 
+        {
           vec3 vertex_relative_to_light = positionFromLight.xyz / positionFromLight.w;
           vertex_relative_to_light = vertex_relative_to_light * 0.5 + 0.5;
           float shadowmap_dist = texture2D(shadowmap, vertex_relative_to_light.xy).r;
           bool shadowed = vertex_relative_to_light.z > shadowmap_dist + 0.000001;
-          
+
           if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
-          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.
             return;
           }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
                                             // Phong shading is not to be confused with the Phong Reflection Model.
           vec4 tex_color = texture2D( texture, f_tex_coord );                    // Sample the texture image in the correct place.
           float s = 1.0;
           if (shadowed) {s = 0.5;}                                                                            // Compute an initial (ambient) color:
-          if( USE_TEXTURE ) gl_FragColor = vec4( s * ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          if( USE_TEXTURE ) gl_FragColor = vec4( s * ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w );
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( N, shadowed );                   // Compute the final color with contributions from lights.
         }`;
@@ -1066,20 +1086,20 @@ class Shadow_Phong_Shader extends Shader          // THE DEFAULT SHADER: This us
                 lightColors_flattened.push(g_state.light.color[i % 4]);
                 lightAttenuations_flattened[0] = g_state.light.attenuation;
             }
-            
+
             var lightTransforms_flattened = Mat.flatten_2D_to_1D(g_state.light.transform.transposed())
-            
+
 
             gl.uniformMatrix4fv(gpu.light_transform_loc, false, lightTransforms_flattened);
             gl.uniform4fv(gpu.lightPosition_loc, lightPositions_flattened);
             gl.uniform4fv(gpu.lightColor_loc, lightColors_flattened);
             gl.uniform1fv(gpu.attenuation_factor_loc, lightAttenuations_flattened);
-            
+
             let shadowmap_loc = gl.getUniformLocation(this.program, "shadowmap")
             gl.uniform1i(shadowmap_loc, 0);
             let texture_loc = gl.getUniformLocation(this.program, "texture")
             gl.uniform1i(texture_loc, 1);
-            
+
         }
 
 
@@ -1111,23 +1131,23 @@ class Tiling_Shadow_Shader extends Shadow_Phong_Shader {
             return this.shared_glsl_code() + `
             uniform sampler2D shadowmap;
         uniform sampler2D texture;
-        
+
         void main()
-        { 
+        {
           vec3 vertex_relative_to_light = positionFromLight.xyz / positionFromLight.w;
           vertex_relative_to_light = vertex_relative_to_light * 0.5 + 0.5;
           float shadowmap_dist = texture2D(shadowmap, vertex_relative_to_light.xy).r;
           bool shadowed = vertex_relative_to_light.z > shadowmap_dist + 0.000001;
-          
+
           if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
-          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.
             return;
           }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
                                             // Phong shading is not to be confused with the Phong Reflection Model.
           vec4 tex_color = texture2D( texture, f_tex_coord * 20.0 );                    // Sample the texture image in the correct place.
           float s = 1.0;
           if (shadowed) {s = 0.5;}                                                                            // Compute an initial (ambient) color:
-          if( USE_TEXTURE ) gl_FragColor = vec4( s * ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          if( USE_TEXTURE ) gl_FragColor = vec4( s * ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w );
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( N, shadowed );                   // Compute the final color with contributions from lights.
         }`;
@@ -1166,7 +1186,7 @@ class Shadow_Shader extends Shader {
       varying vec4 world_position;
     `
   }
-    
+
   vertex_glsl_code() {
     return this.shared_glsl_code() + `
       attribute vec3 object_space_pos;
@@ -1186,7 +1206,7 @@ class Shadow_Shader extends Shader {
       }
     `
   }
-    
+
   fragment_glsl_code() {
     return this.shared_glsl_code() + `
       uniform sampler2D shadowmap;
@@ -1202,7 +1222,7 @@ class Shadow_Shader extends Shader {
         vertex_relative_to_light = vertex_relative_to_light * 0.5 + 0.5;
         vec4 shadowmap_dist = texture2D(shadowmap, vertex_relative_to_light.xy);
         gl_FragColor = shadowmap_dist;
-        
+
         if (in_shadow(positionFromLight)) {
           gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         }
