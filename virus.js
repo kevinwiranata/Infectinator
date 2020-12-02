@@ -281,6 +281,10 @@ export class Virus extends Scene {
         this.moveDown = false;
         this.jump = false;
 
+        this.friction = 0.01;
+        this.moveDir = [0, 0, 0, 0];
+        this.cartVel = [0, 0, 0, 0];
+
         this.torusColor = color(1,1,1,1);
         this.radiusOfTorus = 1.25;
         this.camera_matrix = Mat4.look_at(
@@ -632,70 +636,126 @@ export class Virus extends Scene {
     moveVirus() {
         const normalSpeed = 0.2
         const eatSpeed = 0.4;
-        if (this.moveUp) {
+        if (this.moveUp || this.moveDir[0] == 1) {
+        	this.moveDir[0] = 1;
+        	if(!this.moveUp) {
+                this.cartVel[0] -= this.friction;
+                if(this.cartVel[0] <= 0) {
+                	this.moveDir[0] = 0;
+                	this.cartVel[0] = 0;
+                }
+        	}
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += -normalSpeed*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += normalSpeed*Math.cos(this.torusLocation.angle);
+                	if(this.moveUp) {
+                    	this.cartVel[0] = normalSpeed;
+                    }
+                    this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(normalSpeed*Math.sin(this.torusLocation.angle), -normalSpeed*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
                 }
                 else {
-                    this.torusLocation.x += -eatSpeed*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += eatSpeed*Math.cos(this.torusLocation.angle);
+                	if(this.moveUp) {
+                    	this.cartVel[0] = eatSpeed;
+                    }
+                    this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(eatSpeed*Math.sin(this.torusLocation.angle), -eatSpeed*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
                 }
             }
         }
 
-        if (this.moveLeft) {
+        if (this.moveLeft || this.moveDir[1] == 1) {
+        	this.moveDir[1] = 1;
+        	if(!this.moveLeft) {
+                this.cartVel[1] -= this.friction;
+                if(this.cartVel[1] <= 0) {
+                	this.moveDir[1] = 0;
+                	this.cartVel[1] = 0;
+                }
+        	}
             if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += -normalSpeed*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -normalSpeed*Math.sin(this.torusLocation.angle);
+                	if(this.moveLeft) {
+                    	this.cartVel[1] = normalSpeed;
+                    }
+                    this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(normalSpeed*Math.cos(this.torusLocation.angle), normalSpeed*Math.sin(this.torusLocation.angle),0));
+                    .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
                 }
                 else {
-                    this.torusLocation.x += -eatSpeed*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -eatSpeed*Math.sin(this.torusLocation.angle);
+                	if(this.moveLeft) {
+                    	this.cartVel[1] = eatSpeed;
+                    }
+                    this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(eatSpeed*Math.cos(this.torusLocation.angle), eatSpeed*Math.sin(this.torusLocation.angle),0));
+                    .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
                 }
             }
         }
 
-        if (this.moveDown) {
+        if (this.moveDown || this.moveDir[2] == 1) {
+        	this.moveDir[2] = 1;
+        	if(!this.moveDown) {
+                this.cartVel[2] -= this.friction;
+                if(this.cartVel[2] <= 0) {
+                	this.moveDir[2] = 0;
+                	this.cartVel[2] = 0;
+                }
+        	}
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += normalSpeed*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -normalSpeed*Math.cos(this.torusLocation.angle);
+                	if(this.moveDown) {
+                    	this.cartVel[2] = normalSpeed;
+                    }
+                    this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-normalSpeed*Math.sin(this.torusLocation.angle), +normalSpeed*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
                 }
                 else {
-                    this.torusLocation.x += eatSpeed*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -eatSpeed*Math.cos(this.torusLocation.angle);
+                	if(this.moveDown) {
+                    	this.cartVel[2] = eatSpeed;
+                    }
+                    this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-eatSpeed*Math.sin(this.torusLocation.angle), +eatSpeed*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
                 }
             }
         }
 
-        if (this.moveRight) {
+        if (this.moveRight || this.moveDir[3] == 1) {
+        	this.moveDir[3] = 1;
+        	if(!this.moveDown) {
+                this.cartVel[3] -= this.friction;
+                if(this.cartVel[3] <= 0) {
+                	this.moveDir[3] = 0;
+                	this.cartVel[3] = 0;
+                }
+        	}
             if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
-                    this.torusLocation.x += normalSpeed*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += normalSpeed*Math.sin(this.torusLocation.angle);
+                	if(this.moveRight) {
+                    	this.cartVel[3] = normalSpeed;
+                    }
+                    this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-normalSpeed*Math.cos(this.torusLocation.angle), -normalSpeed*Math.sin(this.torusLocation.angle),0));
+                    .times(Mat4.translation(-this.cartVel[3]*Math.cos(this.torusLocation.angle), -this.cartVel[3]*Math.sin(this.torusLocation.angle),0));
                 }
                 else {
-                    this.torusLocation.x += eatSpeed*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -eatSpeed*Math.cos(this.torusLocation.angle);
+                	if(this.moveRight) {
+                    	this.cartVel[3] = eatSpeed;
+                    }
+                    this.torusLocation.x += this.cartVel[3]*Math.sin(this.torusLocation.angle);
+                    this.torusLocation.y += -this.cartVel[3]*Math.cos(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-eatSpeed*Math.sin(this.torusLocation.angle), +eatSpeed*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), +this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
                 }
             }
         }
