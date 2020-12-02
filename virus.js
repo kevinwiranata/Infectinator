@@ -137,6 +137,64 @@ export class Shape_From_File extends Shape {
 	}
 }
 
+export class Text_Line extends Shape {
+	// **Text_Line** embeds text in the 3D world, using a crude texture
+	// method.  This Shape is made of a horizontal arrangement of quads.
+	// Each is textured over with images of ASCII characters, spelling
+	// out a string.  Usage:  Instantiate the Shape with the desired
+	// character line width.  Then assign it a single-line string by calling
+	// set_string("your string") on it. Draw the shape on a material
+	// with full ambient weight, and text.png assigned as its texture
+	// file.  For multi-line strings, repeat this process and draw with
+	// a different matrix.
+	constructor(max_size) {
+		super("position", "normal", "texture_coord");
+		this.max_size = max_size;
+		var object_transform = Mat4.identity();
+		for (var i = 0; i < max_size; i++) {
+			// Each quad is a separate Square instance:
+			defs.Square.insert_transformed_copy_into(this, [], object_transform);
+			object_transform.post_multiply(Mat4.translation(1.5, 0, 0));
+		}
+	}
+
+	set_string(line, context) {
+		// set_string():  Call this to overwrite the texture coordinates buffer with new
+		// values per quad, which enclose each of the string's characters.
+		this.arrays.texture_coord = [];
+		for (var i = 0; i < this.max_size; i++) {
+			var row = Math.floor(
+					(i < line.length ? line.charCodeAt(i) : " ".charCodeAt()) / 16
+				),
+				col = Math.floor(
+					(i < line.length ? line.charCodeAt(i) : " ".charCodeAt()) % 16
+				);
+
+			var skip = 3,
+				size = 32,
+				sizefloor = size - skip;
+			var dim = size * 16,
+				left = (col * size + skip) / dim,
+				top = (row * size + skip) / dim,
+				right = (col * size + sizefloor) / dim,
+				bottom = (row * size + sizefloor + 5) / dim;
+
+			this.arrays.texture_coord.push(
+				...Vector.cast(
+					[left, 1 - bottom],
+					[right, 1 - bottom],
+					[left, 1 - top],
+					[right, 1 - top]
+				)
+			);
+		}
+		if (!this.existing) {
+			this.copy_onto_graphics_card(context);
+			this.existing = true;
+		} else this.copy_onto_graphics_card(context, ["texture_coord"], false);
+	}
+}
+
 class Antibody {
     constructor(x, y) {
         this.x = x;
@@ -204,6 +262,7 @@ export class Virus extends Scene {
             cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
+            text: new Text_Line(35)
             // microscope: new Shape_From_File("assets/microscope.obj")
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
@@ -248,6 +307,10 @@ export class Virus extends Scene {
                     ambient: 1,
                     texture: new Texture("./assets/welcome.png")
                 }),
+            text_image: new Material(new defs.Textured_Phong(1), {
+                    ambient: 1, diffusivity: 0, specularity: 0,
+                    texture: new Texture("assets/text.png")
+                }),
             },
 
         // sounds
@@ -257,6 +320,7 @@ export class Virus extends Scene {
         }
 
         this.score = 0;
+        this.timer = 10;
 
         this.center = Mat4.identity();
         this.bullets = [];
@@ -505,50 +569,63 @@ export class Virus extends Scene {
 
         this.won = this.isGameWon();
 
+        let welcome_transform = model_transform
+        .times(Mat4.scale(7, 7, 7)
+        .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
+        .times(Mat4.translation(0, 0.84, 0.8))))
+
+        let score_transform = welcome_transform
+        .times(Mat4.scale(0.1, 0.1, 0.1))
+        .times(Mat4.translation(10.8, 8, 0));
+
         if(!this.start) {
             program_state.animation_time = 0;
             this.play_music("minor_circuit");
-            let welcome_transform = model_transform
-            .times(Mat4.scale(7, 7, 7)
-            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
-            .times(Mat4.translation(0, 0.84, 0.8))))
-            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);
             this.score = 0;
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);    
         }
 
         // GAME WON
         else if (this.won) {
-            this.camera_matrix = Mat4.look_at(
-                vec3(0, -12, 6),
-                vec3(0, 0, 0),
-                vec3(0, 0, 1)
-            );
-            let won_transform = model_transform
-            .times(Mat4.scale(7, 7, 7)
-            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
-            .times(Mat4.translation(0, 0.84, 0.8))))
-            this.shapes.square.draw(context, program_state, won_transform, this.materials.test);
-        }
-
-        // GAME OVER
-        else if (this.gameOver) {
+            this.displayScore(this.score);
             this.camera_matrix = Mat4.look_at(
                 vec3(0, -10, 6),
                 vec3(0, 0, 0),
                 vec3(0, 0, 1)
             );
-            let game_over_transform = model_transform
-            .times(Mat4.scale(7, 7, 7)
-            .times(Mat4.rotation(Math.PI / 2.8, 1, 0, 0)
-            .times(Mat4.translation(0, 0.84, 0.8))))
-            this.shapes.square.draw(context, program_state, game_over_transform, this.materials.test);
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
+            let strings = this.score.toString();
+            this.shapes.text.set_string(strings, context.context);
+            this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+        }
+
+        // GAME OVER
+        else if (this.gameOver) {
+            this.displayScore(this.score);
+            this.camera_matrix = Mat4.look_at(
+                vec3(0, -10, 6),
+                vec3(0, 0, 0),
+                vec3(0, 0, 1)
+            );
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.test);
+            let strings = this.score.toString();
+            this.shapes.text.set_string(strings, context.context);
+            this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
+
+
         }
 
         // GAME IN PROGRESS
         else {
             this.displayScore(this.score);
-
+            this.displayTime(Math.floor((this.timer - t)/ 60), ((this.timer - t)%60).toFixed(2));
             this.stop_music("minor_circuit");
+
+            // CHECK FOR TIMER
+            if((this.timer - t) <= 0.00) {
+                this.gameOver = true;
+            }
+
             // DRAW VIRUS CHARACTER
             this.virus= model_transform
             .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
@@ -650,6 +727,11 @@ export class Virus extends Scene {
     displayScore(score) {
         let scoreElement = document.getElementById("score");
         scoreElement.innerHTML = `<span>Score: ${score}</span>`;
+    }
+
+    displayTime(minutes, seconds) {
+        let timerElement = document.getElementById("timer");
+        timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`; 
     }
 
     isGameWon() {
