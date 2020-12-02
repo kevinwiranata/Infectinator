@@ -282,7 +282,7 @@ export class Virus extends Scene {
         this.jump = false;
 
         this.friction = 0.01;
-        this.accel = 0.05;
+        this.accel = 0.01;
         this.moveDir = [0, 0, 0, 0];
         this.cartVel = [0, 0, 0, 0];
 
@@ -802,8 +802,8 @@ export class Virus extends Scene {
                     		if(this.cartVel[1] > 0) {
                     			this.cartVel[1] -= this.accel;
                     		} else {
-                    			this.cartVel[3] += this.accel;
-								this.cartVel[1] = 0;
+                    			this.cartVel[3] += this.accel*2;
+                    		    this.cartVel[1] = 0;
                     		}
                     	} else {
                     		this.cartVel[3] = normalSpeed;
@@ -820,20 +820,22 @@ export class Virus extends Scene {
                     		if(this.cartVel[1] > 0) {
                     			this.cartVel[1] -= this.accel;
                     		} else {
-                    			this.cartVel[3] += this.accel;
-								this.cartVel[1] = 0;
+                    			this.cartVel[3] += this.accel*2;
+                    		    this.cartVel[1] = 0;
                     		}
                     	} else {
                     		this.cartVel[3] = eatSpeed;
                     	}
                     }
-                    this.torusLocation.x += this.cartVel[3]*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -this.cartVel[3]*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
+                    this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
                     this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), +this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
+                    .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), -this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
                 }
             }
         }
+
+        console.log(this.cartVel);
 
         if(this.jump || this.startJump != 0) {
             if(this.startJump == 0) {
