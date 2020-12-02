@@ -282,6 +282,7 @@ export class Virus extends Scene {
         this.jump = false;
 
         this.friction = 0.01;
+        this.accel = 0.1;
         this.moveDir = [0, 0, 0, 0];
         this.cartVel = [0, 0, 0, 0];
 
@@ -634,7 +635,7 @@ export class Virus extends Scene {
     }
 
     moveVirus() {
-        const normalSpeed = 0.2
+        const normalSpeed = 0.2;
         const eatSpeed = 0.4;
         if (this.moveUp || this.moveDir[0] == 1) {
         	this.moveDir[0] = 1;
@@ -648,7 +649,17 @@ export class Virus extends Scene {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveUp) {
-                    	this.cartVel[0] = normalSpeed;
+                    	if(this.cartVel[0] <= normalSpeed) {
+                    		if(this.cartVel[2] > 0) {
+                    			this.cartVel[2] -= this.accel;
+                    		} else {
+                    			this.cartVel[2] = 0;
+                    			this.cartVel[0] += this.accel;
+                    		}
+                    	} else {
+                    		this.cartVel[0] = normalSpeed;
+                    	}
+                    	console.log(this.cartVel[0]);
                     }
                     this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
@@ -657,7 +668,17 @@ export class Virus extends Scene {
                 }
                 else {
                 	if(this.moveUp) {
-                    	this.cartVel[0] = eatSpeed;
+                    	if(this.cartVel[0] <= eatSpeed) {
+                    		if(this.cartVel[2] > 0) {
+                    			this.cartVel[2] -= this.accel;
+                    		} else {
+                    			this.cartVel[0] += this.accel;
+                    			this.cartVel[2] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[0] = eatSpeed;
+                    	}
+
                     }
                     this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
@@ -679,7 +700,16 @@ export class Virus extends Scene {
             if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveLeft) {
-                    	this.cartVel[1] = normalSpeed;
+                    	if(this.cartVel[1] <= normalSpeed) {
+                    		if(this.cartVel[3] > 0) {
+                    			this.cartVel[3] -= this.accel;
+                    		} else {
+                    			this.cartVel[1] += this.accel;
+                    		    this.cartVel[3] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[1] = normalSpeed;
+                    	}
                     }
                     this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
                     this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
@@ -688,7 +718,16 @@ export class Virus extends Scene {
                 }
                 else {
                 	if(this.moveLeft) {
-                    	this.cartVel[1] = eatSpeed;
+                    	if(this.cartVel[1] <= eatSpeed) {
+                    		if(this.cartVel[3] > 0) {
+                    			this.cartVel[3] -= this.accel;
+                    		} else {
+                    			this.cartVel[1] += this.accel;
+								this.cartVel[3] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[1] = eatSpeed;
+                    	}
                     }
                     this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
                     this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
@@ -710,7 +749,16 @@ export class Virus extends Scene {
             if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveDown) {
-                    	this.cartVel[2] = normalSpeed;
+                    	if(this.cartVel[2] <= normalSpeed) {
+                    		if(this.cartVel[0] > 0) {
+                    			this.cartVel[0] -= this.accel;
+                    		} else {
+                    			this.cartVel[2] += this.accel;
+                    		    this.cartVel[0] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[2] = normalSpeed;
+                    	}
                     }
                     this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
@@ -719,7 +767,16 @@ export class Virus extends Scene {
                 }
                 else {
                 	if(this.moveDown) {
-                    	this.cartVel[2] = eatSpeed;
+                    	if(this.cartVel[2] <= eatSpeed) {
+                    		if(this.cartVel[0] > 0) {
+                    			this.cartVel[0] -= this.accel;
+                    		} else {
+                    			this.cartVel[2] += this.accel;
+								this.cartVel[0] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[2] = eatSpeed;
+                    	}
                     }
                     this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
@@ -741,7 +798,16 @@ export class Virus extends Scene {
             if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveRight) {
-                    	this.cartVel[3] = normalSpeed;
+                    	if(this.cartVel[3] <= normalSpeed) {
+                    		if(this.cartVel[1] > 0) {
+                    			this.cartVel[1] -= this.accel;
+                    		} else {
+                    			this.cartVel[3] += this.accel;
+								this.cartVel[1] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[3] = normalSpeed;
+                    	}
                     }
                     this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
                     this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
@@ -750,7 +816,16 @@ export class Virus extends Scene {
                 }
                 else {
                 	if(this.moveRight) {
-                    	this.cartVel[3] = eatSpeed;
+                    	if(this.cartVel[3] <= eatSpeed) {
+                    		if(this.cartVel[1] > 0) {
+                    			this.cartVel[1] -= this.accel;
+                    		} else {
+                    			this.cartVel[3] += this.accel;
+								this.cartVel[1] = 0;
+                    		}
+                    	} else {
+                    		this.cartVel[3] = eatSpeed;
+                    	}
                     }
                     this.torusLocation.x += this.cartVel[3]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += -this.cartVel[3]*Math.cos(this.torusLocation.angle);
@@ -765,7 +840,7 @@ export class Virus extends Scene {
                 this.startJump = this.currTime;
             }
 			let diffTime = (this.currTime - this.startJump);
-			let jump =  Math.sin(45)*2 * diffTime - 1 / 2 * 9.8 * diffTime * diffTime;
+			let jump =  Math.sin(45)*2.5 * diffTime - 1 / 2 * 9.8 * diffTime * diffTime;
 			this.torusLocation.z += jump;
 			this.torusLocation.actualZ += jump;
 			if(this.torusLocation.actualZ < 0) {
