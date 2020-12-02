@@ -580,11 +580,13 @@ export class Virus extends Scene {
                 for (let j = 0; j < this.numCells; j++) {
                     if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
                         if ((this.bulletPositions[i][1][3] >= this.ypositions[j] - 0.5) && (this.bulletPositions[i][1][3] <= this.ypositions[j] + 0.5)) {
-                            if (this.infected[j] != true)
-                                this.score++;
+                            if(this.bulletZ[i] == 0) {
+                                if (this.infected[j] != true)
+                                    this.score++;
 
-                            this.infected[j] = true;
-                            this.removebullet = true;
+                                this.infected[j] = true;
+                                this.removebullet = true;
+                            }
                         }
                     }
                 }
@@ -773,10 +775,12 @@ export class Virus extends Scene {
         for (let i = 0; i < this.numAntibodies; i++) {
             if (this.distanceBetweenTwoPoints(this.torusLocation.x, this.torusLocation.y, this.antibodies[i].x, this.antibodies[i].y) <= this.radiusOfTorus)
             {
-                // TODO: Need to show game over screen. right now only turns virus color to blue
-                if (this.timeElapsed > 3)
-                    this.gameOver = true;
-                break;
+                if(this.torusLocation.actualZ === 0) {
+                    // TODO: Need to show game over screen. right now only turns virus color to blue
+                    if (this.timeElapsed > 3)
+                        this.gameOver = true;
+                    break;
+                }
             }
         }
     }
