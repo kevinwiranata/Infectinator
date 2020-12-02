@@ -500,7 +500,7 @@ export class Virus extends Scene {
             .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, 0.5))
             .times(Mat4.rotation(this.torusLocation.angle, 0, 0, 1))
             this.shapes.covid.draw(context, program_state, this.virus, this.materials.covid);
-            let torus_reflection = model_transform.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y, -0.5)).times(Mat4.scale(1.1, 1.1, 0.1))
+            let torus_reflection = this.virus.times(Mat4.translation(0,0,-1)).times(Mat4.scale(1.1, 1.1, 0.1))
             this.shapes.covid.draw(context, program_state, torus_reflection, this.materials.test_shadow);
 
             this.moveVirus();
@@ -517,7 +517,7 @@ export class Virus extends Scene {
                     // .times(Mat4.scale(0.3, 0.3, 0.3))
                     this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
                     let sphere_reflection =  Mat4.identity()
-                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], -0.4))
+                        .times(Mat4.translation(this.xpositions[i], this.ypositions[i], -0.5))
                         .times(Mat4.scale(1.1, 1.1, 0.1))
                         .times(Mat4.rotation(90, 1, 0, 0))
                         .times(Mat4.scale(0.5,0.5,0.5))
