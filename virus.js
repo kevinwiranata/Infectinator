@@ -210,7 +210,7 @@ export class Virus extends Scene {
             cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
-            // microscope: new Shape_From_File("assets/microscope.obj")
+            microscope: new Shape_From_File("assets/microscope.obj")
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
 
@@ -478,8 +478,8 @@ export class Virus extends Scene {
         this.timeElapsed = t;
         let model_transform = Mat4.identity();
 
-        // let microscope_transform = Mat4.identity();
-        // this.shapes.microscope.draw(context, program_state, microscope_transform, this.materials.test);
+        // let microscope_transform = Mat4.identity().times(Mat4.scale(220,220,220)).times(Mat4.translation(0.72,0.54,0));
+        // this.shapes.microscope.draw(context, program_state, microscope_transform, this.materials.wall);
 
         // BACKGROUND SETUP
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
@@ -581,6 +581,7 @@ export class Virus extends Scene {
                 }
 
                 console.log(this.bulletZ[i]);
+                this.bulletAntibCollision();
                 // check if the bullet hits a cell
                 for (let j = 0; j < this.numCells; j++) {
                     if ((this.bulletPositions[i][0][3] >= this.xpositions[j] - 0.5) && (this.bulletPositions[i][0][3] <= this.xpositions[j] + 0.5)) {
@@ -898,6 +899,20 @@ export class Virus extends Scene {
         return (Math.sqrt(xDiff**2 + yDiff**2));
     }
 
+    bulletAntibCollision() {
+        for(let i = 0; i < this.bullets.length; i++) {
+            for(let j = 0; j < this.numAntibodies; j++) {
+                if ((this.bulletPositions[i][0][3] >= this.antibodies[j].x - 0.5) && (this.bulletPositions[i][0][3] <= this.antibodies[j].x + 0.5)) {
+                    if ((this.bulletPositions[i][1][3] >= this.antibodies[j].y - 0.5) && (this.bulletPositions[i][1][3] <= this.antibodies[j].y + 0.5)) {
+                        if(this.bulletZ[i] === 0) {
+                            this.antibodies[j].angle += 180;
+                            this.removebullet = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
     handleVirusCollision(program_state) {
         for (let i = 0; i < this.xpositions.length; i++) {
             if(this.infected[i] === true && this.eaten[i] === false) {
