@@ -231,7 +231,7 @@ export class Virus extends Scene {
         this.ateTime = -6;
         this.currTime = 0;
 
-        this.numCells = 2;
+        this.numCells = 10;
 
         this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
         this.cell_angle = Array(this.numCells).fill(0);
@@ -610,7 +610,7 @@ export class Virus extends Scene {
         // GAME WON
         else if (this.won) {
             this.displayScore(this.score);
-            this.displayCellsLeft(this.cells_left);
+            this.displayCellsLeft(0);
             this.camera_matrix = Mat4.look_at(
                 vec3(0, -10, 6),
                 vec3(0, 0, 0),
@@ -679,6 +679,7 @@ export class Virus extends Scene {
             this.shapes.covid.draw(context, program_state, torus_reflection, this.materials.test_shadow);
 
             // CELLS
+            this.cells_left = this.numCells;
             for (let i = 0; i < this.numCells; i++) {
                 if (this.infected[i] === false) {
                     // Move cells
@@ -704,6 +705,9 @@ export class Virus extends Scene {
                         .times(Mat4.rotation(90, 1, 0, 0))
                         .times(Mat4.scale(0.5,0.5,0.5))
                     this.shapes.torus.draw(context, program_state, torus_reflection, this.materials.test_shadow);
+                    this.cells_left--;
+                } else  {
+                    this.cells_left--;
                 }
             }
 
@@ -723,7 +727,6 @@ export class Virus extends Scene {
 
                             this.infected[j] = true;
                             this.removebullet = true;
-                            this.cells_left--;
                         }
                     }
                 }
