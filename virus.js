@@ -173,6 +173,8 @@ export class Virus extends Scene {
 
         this.antibodies = [];
         this.numAntibodies = 5;
+        this.antibodyV = Array(this.numAntibodies).fill(0.1);
+        this.antibodyM = 2;
 
         this.foods = [];
         this.ateTime = -6;
@@ -274,6 +276,8 @@ export class Virus extends Scene {
         this.bulletTime = [];
         this.bulletDrop = [];
         this.bulletZ = [];
+        this.bulletM = 1;
+        this.sumMass = this.antibodyM + this.bulletM;
 
         this.moveUp = false;
         this.moveLeft = false;
@@ -580,7 +584,7 @@ export class Virus extends Scene {
 					.times(Mat4.translation(-r*Math.sin(this.bulletDirections[i]), r*Math.cos(this.bulletDirections[i]), 0));
                 }
 
-                console.log(this.bulletZ[i]);
+                // console.log(this.bulletZ[i]);
                 this.bulletAntibCollision();
                 // check if the bullet hits a cell
                 for (let j = 0; j < this.numCells; j++) {
@@ -660,7 +664,7 @@ export class Virus extends Scene {
                     	} else {
                     		this.cartVel[0] = normalSpeed;
                     	}
-                    	console.log(this.cartVel[0]);
+                    	// console.log(this.cartVel[0]);
                     }
                     this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
                     this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
@@ -836,7 +840,7 @@ export class Virus extends Scene {
             }
         }
 
-        console.log(this.cartVel);
+        // console.log(this.cartVel);
 
         if(this.jump || this.startJump != 0) {
             if(this.startJump == 0) {
@@ -880,7 +884,7 @@ export class Virus extends Scene {
     }
 
     moveAntibody(antibodyIndex) {
-        const moveLength = 0.1;
+        const moveLength = this.antibodyV[antibodyIndex];
         let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
         let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
 
@@ -905,7 +909,12 @@ export class Virus extends Scene {
                 if ((this.bulletPositions[i][0][3] >= this.antibodies[j].x - 0.5) && (this.bulletPositions[i][0][3] <= this.antibodies[j].x + 0.5)) {
                     if ((this.bulletPositions[i][1][3] >= this.antibodies[j].y - 0.5) && (this.bulletPositions[i][1][3] <= this.antibodies[j].y + 0.5)) {
                         if(this.bulletZ[i] === 0) {
-                            this.antibodies[j].angle += 180;
+                            // this.antibodies[j].angle += 180;
+                            // let firstTerm = ((this.antibodyM-this.bulletM)/this.sumMass)*this.antibodyV[j];
+                            // let secondTerm = ((2*this.bulletM)/this.sumMass)*1.5;
+                            // 1: bullet    2: antibody     v2 = m1u1+m2u2 / m2 ... bc v1 = 0
+                            let newV = ((this.antibodyM*this.antibodyV[j])+(this.bulletM*1.5))/this.antibodyM
+                            this.antibodyV[j] = newV;
                             this.removebullet = true;
                         }
                     }
