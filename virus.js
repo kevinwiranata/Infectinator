@@ -276,7 +276,7 @@ export class Virus extends Scene {
         this.bulletTime = [];
         this.bulletDrop = [];
         this.bulletZ = [];
-        this.bulletM = 1;
+        this.bulletM = 0.5;
         this.sumMass = this.antibodyM + this.bulletM;
 
         this.moveUp = false;
@@ -538,7 +538,7 @@ export class Virus extends Scene {
         else {
             this.displayScore(this.score);
 
-            this.stop_music("minor_circuit");
+            // this.stop_music("minor_circuit");
             // DRAW VIRUS CHARACTER
             this.virus= model_transform
             .times(Mat4.translation(this.torusLocation.x, this.torusLocation.y, this.torusLocation.z + 0.5))
@@ -884,6 +884,8 @@ export class Virus extends Scene {
     }
 
     moveAntibody(antibodyIndex) {
+        if(this.antibodyV[antibodyIndex] > 0.1)
+            this.antibodyV[antibodyIndex] -= this.friction;
         const moveLength = this.antibodyV[antibodyIndex];
         let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
         let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
@@ -909,11 +911,11 @@ export class Virus extends Scene {
                 if ((this.bulletPositions[i][0][3] >= this.antibodies[j].x - 0.5) && (this.bulletPositions[i][0][3] <= this.antibodies[j].x + 0.5)) {
                     if ((this.bulletPositions[i][1][3] >= this.antibodies[j].y - 0.5) && (this.bulletPositions[i][1][3] <= this.antibodies[j].y + 0.5)) {
                         if(this.bulletZ[i] === 0) {
-                            // this.antibodies[j].angle += 180;
+                            // this.antibodies[j].angle = this.bulletDirections;
                             // let firstTerm = ((this.antibodyM-this.bulletM)/this.sumMass)*this.antibodyV[j];
                             // let secondTerm = ((2*this.bulletM)/this.sumMass)*1.5;
                             // 1: bullet    2: antibody     v2 = m1u1+m2u2 / m2 ... bc v1 = 0
-                            let newV = ((this.antibodyM*this.antibodyV[j])+(this.bulletM*1.5))/this.antibodyM
+                            let newV = ((this.antibodyM * this.antibodyV[j]) + (this.bulletM * 1.5)) / this.antibodyM
                             this.antibodyV[j] = newV;
                             this.removebullet = true;
                         }
