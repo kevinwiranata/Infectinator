@@ -237,7 +237,7 @@ export class Virus extends Scene {
         this.currTime = 0;
         this.startJump = 0;
 
-        this.numCells = 2;
+        this.numCells = 20;
 
         this.cell_transform = Array(this.numCells).fill(0).map(x => Mat4.identity());
         this.cell_angle = Array(this.numCells).fill(0);
@@ -268,7 +268,8 @@ export class Virus extends Scene {
             cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
-            text: new Text_Line(35)
+            text: new Text_Line(35),
+            food: new Shape_From_File("assets/food.obj")
             // microscope: new Shape_From_File("assets/microscope.obj")
         };
         this.shapes.circle.arrays.texture_coord.forEach(v=> v.scale_by(10));
@@ -286,6 +287,7 @@ export class Virus extends Scene {
             petriDish: new Material(new defs.Fake_Bump_Map(1), {
                 color: color(0, 0, 0, 0.8),
                 ambient: 1,
+                specularity: 0,
                 texture: new Texture("./assets/chromosome.jpg")
             }),
             covid: new Material(new defs.Textured_Phong(1), {
@@ -325,7 +327,11 @@ export class Virus extends Scene {
             text_image: new Material(new defs.Textured_Phong(1), {
                     ambient: 1, diffusivity: 0, specularity: 0,
                     texture: new Texture("assets/text.png")
-                }),
+            }),
+            food: new Material(new defs.Textured_Phong(1), {
+                    diffusivity: 1.0, specularity: 1.0, ambient: 1.0,
+                    texture: new Texture("./assets/food.jpg")
+            }),
             },
 
         // sounds
@@ -560,9 +566,6 @@ export class Virus extends Scene {
         this.timeElapsed = t;
         let model_transform = Mat4.identity();
 
-        // let microscope_transform = Mat4.identity();
-        // this.shapes.microscope.draw(context, program_state, microscope_transform, this.materials.test);
-
         // BACKGROUND SETUP
         let background_m = Mat4.identity().times(Mat4.scale(65, 65, 1).times(Mat4.translation(0, 0, -0.6)));
          this.shapes.circle.draw(context, program_state, background_m, this.materials.petriDish);
@@ -644,6 +647,7 @@ export class Virus extends Scene {
 
         // GAME IN PROGRESS
         else {
+            console.log(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y));
             this.displayScore(this.score);
             this.displayTime(Math.floor((this.timer - t)/ 60), ((this.timer - t)%60).toFixed(2));
             this.displayCellsLeft(this.cells_left);
@@ -680,7 +684,8 @@ export class Virus extends Scene {
                     this.shapes.cell.draw(context, program_state, this.cell_transform[i], this.materials.cell);
                 }
                 else if (this.infected[i] === true && this.eaten[i] === false) {
-                    this.shapes.torus.draw(context, program_state, this.cell_transform[i], this.materials.test);
+                    let food_transform =  this.cell_transform[i].times(Mat4.rotation(-Math.PI/5, 1, 0, 0))
+                    this.shapes.food.draw(context, program_state, food_transform, this.materials.food);
                     this.cells_left--;
                 } else  {
                     this.cells_left--;
@@ -773,7 +778,7 @@ export class Virus extends Scene {
                 	this.cartVel[0] = 0;
                 }
         	}
-            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y + 0.5) < 63) {
+            if(this.calclulate_radius(this.torusLocation.x -this.cartVel[0]*Math.sin(this.torusLocation.angle), this.torusLocation.y + this.cartVel[0]*Math.cos(this.torusLocation.angle)) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveUp) {
                     	if(this.cartVel[0] <= normalSpeed) {
@@ -824,7 +829,7 @@ export class Virus extends Scene {
                 	this.cartVel[1] = 0;
                 }
         	}
-            if(this.calclulate_radius(this.torusLocation.x - 0.5, this.torusLocation.y) < 63) {
+            if(this.calclulate_radius(this.torusLocation.x -this.cartVel[1]*Math.cos(this.torusLocation.angle), this.torusLocation.y -this.cartVel[1]*Math.sin(this.torusLocation.angle)) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveLeft) {
                     	if(this.cartVel[1] <= normalSpeed) {
@@ -873,7 +878,7 @@ export class Virus extends Scene {
                 	this.cartVel[2] = 0;
                 }
         	}
-            if(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y - 0.5) < 63) {
+            if(this.calclulate_radius(this.torusLocation.x + this.cartVel[2]*Math.sin(this.torusLocation.angle), this.torusLocation.y -this.cartVel[2]*Math.cos(this.torusLocation.angle)) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveDown) {
                     	if(this.cartVel[2] <= normalSpeed) {
@@ -922,7 +927,7 @@ export class Virus extends Scene {
                 	this.cartVel[3] = 0;
                 }
         	}
-            if(this.calclulate_radius(this.torusLocation.x + 0.5, this.torusLocation.y) < 63) {
+            if(this.calclulate_radius(this.torusLocation.x + this.cartVel[3]*Math.cos(this.torusLocation.angle), this.torusLocation.y + this.cartVel[3]*Math.sin(this.torusLocation.angle)) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveRight) {
                     	if(this.cartVel[3] <= normalSpeed) {
