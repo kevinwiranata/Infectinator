@@ -521,7 +521,7 @@ export class Virus extends Scene {
 			this.bulletDrop.push(1/2 * 9.8); // Total drop will be this.bulletDrop[i] * delta(time);
 			this.bulletTime.push(this.currTime); // delta(time) will be this.currTime - this.bulletTime[i]
 			this.bulletZ.push(this.torusLocation.actualZ);
-			/* Actual position will be this.bulletZ[i] - this.bulletDrop[i] * delta(time) */ 
+			/* Actual position will be this.bulletZ[i] - this.bulletDrop[i] * delta(time) */
 
 			this.bulletPositions.push(Mat4.identity()
 			.times(Mat4.translation(this.torusLocation.x,this.torusLocation.y,this.torusLocation.actualZ)
@@ -599,7 +599,7 @@ export class Virus extends Scene {
             program_state.animation_time = 0;
             this.play_music("minor_circuit");
             this.score = 0;
-            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);    
+            this.shapes.square.draw(context, program_state, welcome_transform, this.materials.welcome);
         }
 
         // GAME WON
@@ -633,19 +633,19 @@ export class Virus extends Scene {
             let time = Math.floor((this.timeLost/ 60).toString()) + ":" + ((this.timeLost)%60).toFixed(0).toString();
 
             // ran out of time
-            if(this.timer - t <= 0.0) { 
+            if(this.timer - t <= 0.0) {
                 this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_time);
                 this.shapes.text.set_string(this.score.toString(), context.context);
                 this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
 
                 this.shapes.text.set_string("0:0", context.context);
                 this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
-            } 
+            }
             else {   // hit by antibody
                 this.shapes.square.draw(context, program_state, welcome_transform, this.materials.end_screen_antibody);
                 this.shapes.text.set_string(this.score.toString(), context.context);
                 this.shapes.text.draw(context, program_state, score_transform, this.materials.text_image);
-    
+
                 this.shapes.text.set_string(time, context.context);
                 this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
             }
@@ -705,7 +705,7 @@ export class Virus extends Scene {
                 this.removebullet = false;
                 let r = 1.5;
                 let delta_time = (this.currTime - this.bulletTime[i])/10;
-                let drop = this.bulletDrop[i] * delta_time * delta_time; 
+                let drop = this.bulletDrop[i] * delta_time * delta_time;
                 if(this.bulletZ[i] - drop < 0.5) {
                 	drop = this.bulletZ[i] - -0.5;
                 	this.bulletZ[i] = 0;
@@ -804,10 +804,12 @@ export class Virus extends Scene {
                     	}
                     	// console.log(this.cartVel[0]);
                     }
-                    this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
+                    if ((this.calclulate_radius(this.torusLocation.x -this.cartVel[0]*Math.sin(this.torusLocation.angle), this.torusLocation.y + this.cartVel[0]*Math.cos(this.torusLocation.angle)) < 63)) {
+                        this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
+                        this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
+                    }
                 }
                 else {
                 	if(this.moveUp) {
@@ -823,10 +825,12 @@ export class Virus extends Scene {
                     	}
 
                     }
-                    this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
+                    if ((this.calclulate_radius(this.torusLocation.x -this.cartVel[0]*Math.sin(this.torusLocation.angle), this.torusLocation.y + this.cartVel[0]*Math.cos(this.torusLocation.angle)) < 63)) {
+                        this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
+                        this.torusLocation.y += this.cartVel[0]*Math.cos(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(this.cartVel[0]*Math.sin(this.torusLocation.angle), -this.cartVel[0]*Math.cos(this.torusLocation.angle),0));
+                    }
                 }
             }
         }
@@ -854,10 +858,12 @@ export class Virus extends Scene {
                     		this.cartVel[1] = normalSpeed;
                     	}
                     }
-                    this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x -this.cartVel[1]*Math.cos(this.torusLocation.angle), this.torusLocation.y -this.cartVel[1]*Math.sin(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
+                        this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
+                    }
                 }
                 else {
                 	if(this.moveLeft) {
@@ -872,10 +878,12 @@ export class Virus extends Scene {
                     		this.cartVel[1] = eatSpeed;
                     	}
                     }
-                    this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x -this.cartVel[1]*Math.cos(this.torusLocation.angle), this.torusLocation.y -this.cartVel[1]*Math.sin(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += -this.cartVel[1]*Math.cos(this.torusLocation.angle);
+                        this.torusLocation.y += -this.cartVel[1]*Math.sin(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(this.cartVel[1]*Math.cos(this.torusLocation.angle), this.cartVel[1]*Math.sin(this.torusLocation.angle),0));
+                    }
                 }
             }
         }
@@ -903,10 +911,12 @@ export class Virus extends Scene {
                     		this.cartVel[2] = normalSpeed;
                     	}
                     }
-                    this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x + this.cartVel[2]*Math.sin(this.torusLocation.angle), this.torusLocation.y -this.cartVel[2]*Math.cos(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
+                        this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
+                    }
                 }
                 else {
                 	if(this.moveDown) {
@@ -921,10 +931,12 @@ export class Virus extends Scene {
                     		this.cartVel[2] = eatSpeed;
                     	}
                     }
-                    this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
-                    this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x + this.cartVel[2]*Math.sin(this.torusLocation.angle), this.torusLocation.y -this.cartVel[2]*Math.cos(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += this.cartVel[2]*Math.sin(this.torusLocation.angle);
+                        this.torusLocation.y += -this.cartVel[2]*Math.cos(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(-this.cartVel[2]*Math.sin(this.torusLocation.angle), +this.cartVel[2]*Math.cos(this.torusLocation.angle),0));
+                    }
                 }
             }
         }
@@ -937,7 +949,7 @@ export class Virus extends Scene {
                 	this.moveDir[3] = 0;
                 	this.cartVel[3] = 0;
                 }
-        	}
+            }
             if(this.calclulate_radius(this.torusLocation.x + this.cartVel[3]*Math.cos(this.torusLocation.angle), this.torusLocation.y + this.cartVel[3]*Math.sin(this.torusLocation.angle)) < 63) {
                 if(this.currTime - this.ateTime > 5) {
                 	if(this.moveRight) {
@@ -952,10 +964,12 @@ export class Virus extends Scene {
                     		this.cartVel[3] = normalSpeed;
                     	}
                     }
-                    this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-this.cartVel[3]*Math.cos(this.torusLocation.angle), -this.cartVel[3]*Math.sin(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x + this.cartVel[3]*Math.cos(this.torusLocation.angle), this.torusLocation.y + this.cartVel[3]*Math.sin(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
+                        this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(-this.cartVel[3]*Math.cos(this.torusLocation.angle), -this.cartVel[3]*Math.sin(this.torusLocation.angle),0));
+                    }
                 }
                 else {
                 	if(this.moveRight) {
@@ -970,10 +984,12 @@ export class Virus extends Scene {
                     		this.cartVel[3] = eatSpeed;
                     	}
                     }
-                    this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
-                    this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
-                    this.camera_matrix = this.camera_matrix
-                    .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), -this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
+                    if(this.calclulate_radius(this.torusLocation.x + this.cartVel[3]*Math.cos(this.torusLocation.angle), this.torusLocation.y + this.cartVel[3]*Math.sin(this.torusLocation.angle)) < 63) {
+                        this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
+                        this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
+                        this.camera_matrix = this.camera_matrix
+                        .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), -this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
+                    }
                 }
             }
         }
@@ -1003,13 +1019,13 @@ export class Virus extends Scene {
 
     displayTime(minutes, seconds) {
         let timerElement = document.getElementById("timer");
-        timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`; 
+        timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`;
     }
 
     displayCellsLeft(cells) {
         console.log(cells);
         let cellsElement = document.getElementById("cells");
-        cellsElement.innerHTML = `<span>Cells left: ${cells}</span>`; 
+        cellsElement.innerHTML = `<span>Cells left: ${cells}</span>`;
     }
 
     isGameWon(t) {
