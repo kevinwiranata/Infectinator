@@ -988,7 +988,7 @@ export class Virus extends Scene {
                         this.torusLocation.x += this.cartVel[3]*Math.cos(this.torusLocation.angle);
                         this.torusLocation.y += this.cartVel[3]*Math.sin(this.torusLocation.angle);
                         this.camera_matrix = this.camera_matrix
-                        .times(Mat4.translation(-this.cartVel[3]*Math.sin(this.torusLocation.angle), -this.cartVel[3]*Math.cos(this.torusLocation.angle),0));
+                        .times(Mat4.translation(-this.cartVel[3]*Math.cos(this.torusLocation.angle), -this.cartVel[3]*Math.sin(this.torusLocation.angle),0));
                     }
                 }
             }
