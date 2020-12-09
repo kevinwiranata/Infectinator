@@ -269,6 +269,7 @@ export class Virus extends Scene {
             circle: new defs.Regular_2D_Polygon(65, 65),
             cell: new Shape_From_File("assets/cell.obj"),
             covid: new Shape_From_File("assets/corona.obj"),
+            antibody: new Shape_From_File("assets/antibody.obj"),
             petri_dish: new Shape_From_File("assets/wall.obj"),
             microscope: new Shape_From_File("assets/microscope.obj"),
             text: new Text_Line(35),
@@ -300,7 +301,7 @@ export class Virus extends Scene {
             wall: new Material(new Gouraud_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#89cff0")}),
             antibody: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#009dff")}),
+                {ambient: .5, diffusivity: .8, color: hex_color("#eeebe3")}),
             antibody_shadow: new Material(new defs.Phong_Shader(),
                 {ambient: 0, diffusivity: 0, specularity: 0, color: hex_color("#000000")}),
             cell: new Material(new defs.Textured_Phong(1), {
@@ -335,7 +336,7 @@ export class Virus extends Scene {
                     diffusivity: 1.0, specularity: 1.0, ambient: 1.0,
                     texture: new Texture("./assets/food.jpg")
             }),
-            },
+        },
 
         // sounds
         this.sounds = {
@@ -380,7 +381,7 @@ export class Virus extends Scene {
         this.cartVel = [0, 0, 0, 0];
 
         this.torusColor = color(1,1,1,1);
-        this.radiusOfTorus = 1.25;
+        this.radiusOfTorus = 2;
         this.camera_matrix = Mat4.look_at(
             vec3(0, -10, 6),
             vec3(0, 0, 0),
@@ -449,7 +450,7 @@ export class Virus extends Scene {
         this.key_triggered_button("Left", ["a"], () => {this.moveLeft = true}, undefined, () => {this.moveLeft = false});
         this.key_triggered_button("Down", ["s"], () => {this.moveDown = true}, undefined, () => {this.moveDown = false});
         this.key_triggered_button("Right", ["d"], () => {this.moveRight = true}, undefined, () => {this.moveRight = false});
-        this.key_triggered_button("Jump", ["n"], () => {this.jump = true}, undefined, () => {this.jump = false});
+        this.key_triggered_button("Jump", [" "], () => {this.jump = true}, undefined, () => {this.jump = false});
 
         this.key_triggered_button("Start", ['Enter'], () => this.start = true)
         this.key_triggered_button("Rotate Left", ["b"], () => {
@@ -766,11 +767,9 @@ export class Virus extends Scene {
 
                 this.antibodies[i].model_transform = Mat4.identity()
                     .times(Mat4.translation(xPos, yPos, 0))
-                    .times(Mat4.scale(0.5, 0.5, 0.5));
-                let antibodies_reflection = Mat4.identity()
-
-
-                this.shapes.sphere.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
+                    .times(Mat4.scale(0.5, 0.5, 0.5))
+                    .times(Mat4.rotation(Math.PI/2, 1, 0, 0));
+                this.shapes.antibody.draw(context, program_state, this.antibodies[i].model_transform, this.materials.antibody);
             }
             this.currTime = program_state.animation_time / 1000;
             this.handleVirusCollision(program_state, t);
