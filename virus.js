@@ -230,9 +230,12 @@ export class Virus extends Scene {
         this.ypositions = [];
 
         this.antibodies = [];
-        this.numAntibodies = 5;
+        this.numAntibodies = 1;
         this.antibodyV = Array(this.numAntibodies).fill(0.1);
         this.antibodyM = 2;
+
+        this.antibody_temp_vel = Array(this.numAntibodies).fill(0);
+        this.antibody_temp_angle = Array(this.numAntibodies).fill(0);
 
         this.foods = [];
         this.ateTime = -6;
@@ -605,7 +608,6 @@ export class Virus extends Scene {
 
         // GAME WON
         else if (this.won) {
-            console.log(this.timeLost);
             this.displayScore(this.score);
             this.displayCellsLeft(0);
             this.camera_matrix = Mat4.look_at(
@@ -656,7 +658,6 @@ export class Virus extends Scene {
 
         // GAME IN PROGRESS
         else {
-            console.log(this.calclulate_radius(this.torusLocation.x, this.torusLocation.y));
             this.displayScore(this.score);
             this.displayTime(Math.floor((this.timer - t)/ 60), ((this.timer - t)%60).toFixed(2));
             this.displayCellsLeft(this.cells_left);
@@ -721,7 +722,6 @@ export class Virus extends Scene {
 					.times(Mat4.translation(-r*Math.sin(this.bulletDirections[i]), r*Math.cos(this.bulletDirections[i]), 0));
                 }
 
-                // console.log(this.bulletZ[i]);
                 this.bulletAntibCollision();
                 // check if the bullet hits a cell
                 for (let j = 0; j < this.numCells; j++) {
@@ -801,7 +801,6 @@ export class Virus extends Scene {
                     	} else {
                     		this.cartVel[0] = normalSpeed;
                     	}
-                    	// console.log(this.cartVel[0]);
                     }
                     if ((this.calclulate_radius(this.torusLocation.x -this.cartVel[0]*Math.sin(this.torusLocation.angle), this.torusLocation.y + this.cartVel[0]*Math.cos(this.torusLocation.angle)) < 63)) {
                         this.torusLocation.x += -this.cartVel[0]*Math.sin(this.torusLocation.angle);
@@ -1011,29 +1010,6 @@ export class Virus extends Scene {
         }
     }
 
-    displayScore(score) {
-        let scoreElement = document.getElementById("score");
-        scoreElement.innerHTML = `<span>Score: ${score}</span>`;
-    }
-
-    displayTime(minutes, seconds) {
-        let timerElement = document.getElementById("timer");
-        timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`;
-    }
-
-    displayCellsLeft(cells) {
-        console.log(cells);
-        let cellsElement = document.getElementById("cells");
-        cellsElement.innerHTML = `<span>Cells left: ${cells}</span>`;
-    }
-
-    isGameWon(t) {
-        if(this.infected.every(infect => infect === true)) {
-            this.timeLost = this.timer - t;
-            return true;
-        }
-    }
-
     moveCells(cellIndex) {
         const moveLength = 0.1;
         let nextX = this.xpositions[cellIndex]+ moveLength*Math.cos(this.cell_angle[cellIndex]);
@@ -1051,17 +1027,22 @@ export class Virus extends Scene {
     moveAntibody(antibodyIndex) {
         if(this.antibodyV[antibodyIndex] > 0.1)
             this.antibodyV[antibodyIndex] -= this.friction;
+        if(this.antibody_temp_vel[antibodyIndex] > 0.0)
+            this.antibody_temp_vel[antibodyIndex] -= this.friction;
+
         const moveLength = this.antibodyV[antibodyIndex];
-        let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
-        let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
+        const moveLengthTemp = this.antibody_temp_vel[antibodyIndex];
+        let nextX = this.antibodies[antibodyIndex].x + moveLength*Math.cos(this.antibodies[antibodyIndex].angle) - moveLengthTemp*Math.sin(this.antibody_temp_angle[antibodyIndex]);
+        let nextY = this.antibodies[antibodyIndex].y + moveLength*Math.sin(this.antibodies[antibodyIndex].angle) + moveLengthTemp*Math.cos(this.antibody_temp_angle[antibodyIndex]);
 
         // if collides with circumference of petri dish
         if(this.calclulate_radius(nextX, nextY) >= 63) {
             this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
+            this.antibody_temp_angle[antibodyIndex] = (this.antibody_temp_angle[antibodyIndex] + 180);
         }
 
-        this.antibodies[antibodyIndex].x += moveLength*Math.cos(this.antibodies[antibodyIndex].angle);
-        this.antibodies[antibodyIndex].y += moveLength*Math.sin(this.antibodies[antibodyIndex].angle);
+        this.antibodies[antibodyIndex].x += moveLength*Math.cos(this.antibodies[antibodyIndex].angle) - moveLengthTemp*Math.sin(this.antibody_temp_angle[antibodyIndex]);
+        this.antibodies[antibodyIndex].y += moveLength*Math.sin(this.antibodies[antibodyIndex].angle)  + moveLengthTemp*Math.cos(this.antibody_temp_angle[antibodyIndex]);
     }
 
     distanceBetweenTwoPoints(x1, y1, x2, y2) {
@@ -1080,8 +1061,11 @@ export class Virus extends Scene {
                             // let firstTerm = ((this.antibodyM-this.bulletM)/this.sumMass)*this.antibodyV[j];
                             // let secondTerm = ((2*this.bulletM)/this.sumMass)*1.5;
                             // 1: bullet    2: antibody     v2 = m1u1+m2u2 / m2 ... bc v1 = 0
-                            let newV = ((this.antibodyM * this.antibodyV[j]) + (this.bulletM * 1.5)) / this.antibodyM
-                            this.antibodyV[j] = newV;
+                            let newV = ((this.antibodyM * this.antibodyV[j]) + (this.bulletM * 2)) / this.antibodyM
+                            this.antibody_temp_vel[j] = newV;
+                            this.antibody_temp_angle[j] = this.bulletDirections[i];
+                            // this.antibodyV[j] = newV;
+
                             this.removebullet = true;
                         }
                     }
@@ -1089,6 +1073,7 @@ export class Virus extends Scene {
             }
         }
     }
+
     handleVirusCollision(program_state, t) {
         for (let i = 0; i < this.xpositions.length; i++) {
             if(this.infected[i] === true && this.eaten[i] === false) {
@@ -1109,6 +1094,28 @@ export class Virus extends Scene {
                     break;
                 }
             }
+        }
+    }
+
+    displayScore(score) {
+        let scoreElement = document.getElementById("score");
+        scoreElement.innerHTML = `<span>Score: ${score}</span>`;
+    }
+
+    displayTime(minutes, seconds) {
+        let timerElement = document.getElementById("timer");
+        timerElement.innerHTML = `<span>Time left: ${minutes}:${seconds}</span>`;
+    }
+
+    displayCellsLeft(cells) {
+        let cellsElement = document.getElementById("cells");
+        cellsElement.innerHTML = `<span>Cells left: ${cells}</span>`;
+    }
+
+    isGameWon(t) {
+        if(this.infected.every(infect => infect === true)) {
+            this.timeLost = this.timer - t;
+            return true;
         }
     }
 }
