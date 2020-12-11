@@ -230,7 +230,7 @@ export class Virus extends Scene {
         this.ypositions = [];
 
         this.antibodies = [];
-        this.numAntibodies = 1;
+        this.numAntibodies = 10;
         this.antibodyV = Array(this.numAntibodies).fill(0.1);
         this.antibodyM = 2;
 
@@ -1037,6 +1037,9 @@ export class Virus extends Scene {
 
         // if collides with circumference of petri dish
         if(this.calclulate_radius(nextX, nextY) >= 63) {
+            if(this.antibody_temp_vel > 0.25) {
+                this.antibody_temp_angle[antibodyIndex] = (this.antibodies[antibodyIndex].angle + 180);
+            }
             this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
             this.antibody_temp_angle[antibodyIndex] = (this.antibody_temp_angle[antibodyIndex] + 180);
         }
