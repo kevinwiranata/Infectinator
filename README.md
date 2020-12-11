@@ -33,6 +33,8 @@ Controls:
 * *Friction/Acceleration* : virus slides to a stop if a WASD control key is released. Friction is also used to slow down antibody after the initial speedup from collision
 * *Gravity* : if bullets are shot when the virus is in the air, they would drop in a projectile fashion based on kinematic equations. They are also used for the player's jumps.
 
+[Here](https://streamable.com/lpx1cc) is the link to a recording of the game!
+
 # tiny-graphics.js
 
 This is a small, single file JavaScript utility.  It organizes WebGL programs to be object-oriented and minimally cluttered.  
