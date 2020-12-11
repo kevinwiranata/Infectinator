@@ -1028,7 +1028,7 @@ export class Virus extends Scene {
         if(this.antibodyV[antibodyIndex] > 0.1)
             this.antibodyV[antibodyIndex] -= this.friction;
         if(this.antibody_temp_vel[antibodyIndex] > 0.0)
-            this.antibody_temp_vel[antibodyIndex] -= this.friction;
+            this.antibody_temp_vel[antibodyIndex] -= this.friction*0.9;
 
         const moveLength = this.antibodyV[antibodyIndex];
         const moveLengthTemp = this.antibody_temp_vel[antibodyIndex];
@@ -1037,11 +1037,13 @@ export class Virus extends Scene {
 
         // if collides with circumference of petri dish
         if(this.calclulate_radius(nextX, nextY) >= 63) {
-            if(this.antibody_temp_vel > 0.25) {
+            if(this.antibody_temp_vel > 0.0) {
+                this.antibodies[antibodyIndex].angle = (this.antibody_temp_angle[antibodyIndex] + 180);
+                this.antibody_temp_angle[antibodyIndex] = (this.antibody_temp_angle[antibodyIndex] + 180);
+            } else {
+                this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
                 this.antibody_temp_angle[antibodyIndex] = (this.antibodies[antibodyIndex].angle + 180);
             }
-            this.antibodies[antibodyIndex].angle = (this.antibodies[antibodyIndex].angle + 180);
-            this.antibody_temp_angle[antibodyIndex] = (this.antibody_temp_angle[antibodyIndex] + 180);
         }
 
         this.antibodies[antibodyIndex].x += moveLength*Math.cos(this.antibodies[antibodyIndex].angle) - moveLengthTemp*Math.sin(this.antibody_temp_angle[antibodyIndex]);
