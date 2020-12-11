@@ -1,3 +1,38 @@
+# Infectinator
+
+Our game is inspired by the current COVID situation. We also incorporate scientifc facts of virus to make it educational for younger players as well.
+Listed here are the characters you will find in the game:
+
+* Virus
+* Antibodies
+* Cells
+* Snacks
+
+Our environment is a petri dish. The player takes on the role of a virus, and the objective is to infect all the cells by shooting bullets at them. Bullets here represent proteins that virus inject into their target cells. Based on the scientific fact that virus get their energy from cells they infect, our infected cells turn into snacks that the player can collect to increase the speed. Once you’ve infected all cells before the timer runs out, you win the game. Oh, and you must also dodge or jump over the antibodies. They're our there looking to kill you!
+
+Controls:
+* WASD - move up, down, left, right
+* Space bar - jump
+* Mouse/trackpad - look around the petri dish
+* B - rotate left
+* R - rotate right
+
+# Advanced Features
+
+## Collision Detection 
+
+* *Character-boundary* : Characters should not go over the petri dish boundary  
+* *Bullet-cell* : Bullet stops & Cell becomes snacks once hit with a bullet  
+* *Bullet-antibody* : Bullet stops & Antibody changes speed and angle once hit  
+* *Virus-antibody* : Game over when virus collides with an antibody  
+* *Virus-snack* : Virus gets speed powerup from snack
+
+## Physics
+
+* *Momentum* : speed and angle of antibody after collision with a bullet is calculated based on the conservation of momentum principle
+* *Friction/Acceleration* : virus slides to a stop if a WASD control key is released. Friction is also used to slow down antibody after the initial speedup from collision
+* *Gravity* : if bullets are shot when the virus is in the air, they would drop in a projectile fashion based on kinematic equations. They are also used for the player's jumps.
+
 # tiny-graphics.js
 
 This is a small, single file JavaScript utility.  It organizes WebGL programs to be object-oriented and minimally cluttered.  
