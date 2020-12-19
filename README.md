@@ -17,6 +17,10 @@ Controls:
 * B - rotate left
 * R - rotate right
 
+Play the live game [Here!](https://kevinwiranata.github.io/Infectinator/)
+
+Note: Assets may take up to 5+ seconds to load once the site is open.
+
 # Advanced Features
 
 ## Collision Detection 
